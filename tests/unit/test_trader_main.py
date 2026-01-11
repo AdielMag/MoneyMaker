@@ -124,11 +124,10 @@ def client(mock_trader_service):
             "services.trader.main.get_trader_service",
             return_value=mock_trader_service,
         ):
+            import services.trader.main as trader_main
             from services.trader.main import app
 
             # Reset service instance
-            import services.trader.main as trader_main
-
             trader_main._trader_service = None
 
             with TestClient(app) as test_client:

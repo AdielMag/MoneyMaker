@@ -48,11 +48,10 @@ def client(mock_scraper_service):
             "services.scraper.main.get_scraper_service",
             return_value=mock_scraper_service,
         ):
+            import services.scraper.main as scraper_main
             from services.scraper.main import app
 
             # Reset service instance
-            import services.scraper.main as scraper_main
-
             scraper_main._scraper_service = None
 
             with TestClient(app) as test_client:

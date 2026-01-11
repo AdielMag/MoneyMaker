@@ -63,11 +63,10 @@ def client(mock_monitor_service):
             "services.monitor.main.get_monitor_service",
             return_value=mock_monitor_service,
         ):
+            import services.monitor.main as monitor_main
             from services.monitor.main import app
 
             # Reset service instance
-            import services.monitor.main as monitor_main
-
             monitor_main._monitor_service = None
 
             with TestClient(app) as test_client:

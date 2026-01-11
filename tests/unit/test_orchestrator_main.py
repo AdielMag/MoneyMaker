@@ -103,11 +103,10 @@ def client(mock_orchestrator_service):
             "services.orchestrator.main.get_orchestrator_service",
             return_value=mock_orchestrator_service,
         ):
+            import services.orchestrator.main as orchestrator_main
             from services.orchestrator.main import app
 
             # Reset service instance
-            import services.orchestrator.main as orchestrator_main
-
             orchestrator_main._orchestrator = None
 
             with TestClient(app) as test_client:

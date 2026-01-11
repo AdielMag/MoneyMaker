@@ -73,11 +73,10 @@ def client(mock_ai_service):
             "services.ai_suggester.main.get_ai_suggester_service",
             return_value=mock_ai_service,
         ):
+            import services.ai_suggester.main as ai_main
             from services.ai_suggester.main import app
 
             # Reset service instance
-            import services.ai_suggester.main as ai_main
-
             ai_main._ai_service = None
 
             with TestClient(app) as test_client:
