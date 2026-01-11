@@ -97,13 +97,12 @@ class Market(BaseModel):
 
     def compute_time_to_resolution(self) -> float:
         """Calculate hours until market resolution."""
-        from datetime import timezone
-        now = datetime.now(timezone.utc)
+        now = datetime.now(datetime.UTC)
         # Handle both timezone-aware and naive end_dates
         end_date = self.end_date
         if end_date.tzinfo is None:
             # If end_date is naive, assume UTC
-            end_date = end_date.replace(tzinfo=timezone.utc)
+            end_date = end_date.replace(tzinfo=datetime.UTC)
         if end_date <= now:
             return 0.0
         delta = end_date - now
