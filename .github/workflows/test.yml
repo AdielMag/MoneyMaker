@@ -92,6 +92,8 @@ jobs:
           verbose: true
           flags: unit
           name: codecov-moneymaker
+          disable_search: true
+          plugins: ""
       
       - name: Coverage comment on PR
         if: github.event_name == 'pull_request'
