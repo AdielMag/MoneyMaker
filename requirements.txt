@@ -1,0 +1,32 @@
+# MoneyMaker - Core Dependencies
+# Python 3.11+ required
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Data Validation
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# HTTP Client
+httpx>=0.26.0
+
+# GCP Services
+google-cloud-firestore>=2.14.0
+
+# AI
+google-generativeai>=0.3.0
+
+# Polymarket
+py-clob-client>=0.1.0
+
+# Configuration
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+
+# Logging
+structlog>=24.1.0
+
+# Utilities
+tenacity>=8.2.0

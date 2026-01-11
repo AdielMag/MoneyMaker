@@ -1,0 +1,49 @@
+# MoneyMaker Configuration
+# Default configuration values - override with environment variables
+# Updated with safer testing values
+
+workflows:
+  real_money:
+    enabled: false                    # ⚠️ Keep false until ready for real trading!
+    scheduler_cron: "0 */2 * * *"     # Every 2 hours
+  fake_money:
+    enabled: true
+    scheduler_cron: "*/30 * * * *"    # Every 30 minutes
+    initial_balance: 1000.0
+
+trading:
+  min_balance_to_trade: 10.0
+  max_bet_amount: 20.0                # Smaller bets for testing
+  max_positions: 5                    # Fewer positions to manage
+  sell_thresholds:
+    stop_loss_percent: -10            # Tighter stop loss (sell if down 10%)
+    take_profit_percent: 20           # Take profits earlier (sell if up 20%)
+
+market_filters:
+  min_volume: 500                     # Lower threshold for more options
+  max_time_to_resolution_hours: 2     # Markets resolving within 2 hours
+  min_liquidity: 500
+  excluded_categories:
+    - sports
+    - entertainment
+  min_price: 0.05                     # Skip extreme low prices
+  max_price: 0.95                     # Skip extreme high prices
+
+ai:
+  model: "gemini-1.5-pro"
+  max_suggestions: 3                  # More selective (top 3 picks only)
+  confidence_threshold: 0.75          # Higher confidence required (75%+)
+  temperature: 0.3                    # Keep low for consistent predictions
+  max_tokens: 2048
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  cors_origins:
+    - "*"
+
+logging:
+  level: "INFO"
+  format: "json"
+  include_timestamp: true

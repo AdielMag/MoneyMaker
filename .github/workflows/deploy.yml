@@ -1,0 +1,139 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to deploy (orchestrator, scraper, ai_suggester, trader, monitor, all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - orchestrator
+          - scraper
+          - ai_suggester
+          - trader
+          - monitor
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: Run tests
+        run: pytest tests/unit -v --cov-fail-under=80
+        env:
+          ENVIRONMENT: test
+
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    
+    strategy:
+      matrix:
+        service: [orchestrator, scraper, ai_suggester, trader, monitor]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+      
+      - name: Get version tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build Docker image
+        if: github.event.inputs.service == 'all' || github.event.inputs.service == matrix.service || github.event_name == 'push'
+        run: |
+          docker build \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/moneymaker/${{ matrix.service }}:${{ steps.version.outputs.tag }} \
+            -f services/${{ matrix.service }}/Dockerfile \
+            .
+      
+      - name: Push Docker image
+        if: github.event.inputs.service == 'all' || github.event.inputs.service == matrix.service || github.event_name == 'push'
+        run: |
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/moneymaker/${{ matrix.service }}:${{ steps.version.outputs.tag }}
+
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    
+    strategy:
+      matrix:
+        service: [orchestrator, scraper, ai_suggester, trader, monitor]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      
+      - name: Get version tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Deploy to Cloud Run
+        if: github.event.inputs.service == 'all' || github.event.inputs.service == matrix.service || github.event_name == 'push'
+        run: |
+          gcloud run deploy moneymaker-${{ matrix.service }} \
+            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/moneymaker/${{ matrix.service }}:${{ steps.version.outputs.tag }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "ENVIRONMENT=production,GCP_PROJECT_ID=${{ env.PROJECT_ID }}" \
+            --set-secrets "POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest"
+      
+      - name: Get service URL
+        if: github.event.inputs.service == 'all' || github.event.inputs.service == matrix.service || github.event_name == 'push'
+        run: |
+          URL=$(gcloud run services describe moneymaker-${{ matrix.service }} --region ${{ env.REGION }} --format 'value(status.url)')
+          echo "Service URL: $URL"

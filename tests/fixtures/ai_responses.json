@@ -1,0 +1,113 @@
+{
+  "valid_suggestion": {
+    "suggestions": [
+      {
+        "market_id": "market-001",
+        "market_question": "Will Bitcoin reach $100,000 by end of day?",
+        "recommended_outcome": "Yes",
+        "confidence": 0.75,
+        "reasoning": "Based on current momentum and trading volume, BTC shows strong bullish signals. The current price of $98,500 is within striking distance of the target.",
+        "suggested_position_size": 0.1,
+        "risk_level": "medium"
+      },
+      {
+        "market_id": "market-004",
+        "market_question": "Will Fed announce rate cut in next hour?",
+        "recommended_outcome": "No",
+        "confidence": 0.85,
+        "reasoning": "No scheduled Fed meetings today. Emergency rate cuts are extremely rare and there are no current economic indicators suggesting one is imminent.",
+        "suggested_position_size": 0.15,
+        "risk_level": "low"
+      },
+      {
+        "market_id": "market-006",
+        "market_question": "Will SOL reach $200 in the next 45 minutes?",
+        "recommended_outcome": "No",
+        "confidence": 0.70,
+        "reasoning": "SOL is currently at $175. A 14% jump in 45 minutes is unlikely without major catalyst. Current market conditions are stable.",
+        "suggested_position_size": 0.08,
+        "risk_level": "medium"
+      }
+    ],
+    "analysis_timestamp": "2024-06-15T12:00:00Z",
+    "markets_analyzed": 4,
+    "overall_market_sentiment": "neutral"
+  },
+  "empty_suggestion": {
+    "suggestions": [],
+    "analysis_timestamp": "2024-06-15T12:00:00Z",
+    "markets_analyzed": 4,
+    "overall_market_sentiment": "uncertain",
+    "reasoning": "No markets currently meet the confidence threshold for recommendations. Market conditions are too volatile or unclear."
+  },
+  "malformed_response": {
+    "error": "Invalid JSON structure",
+    "raw_text": "I think you should buy Bitcoin because it's going to the moon!"
+  },
+  "low_confidence_suggestion": {
+    "suggestions": [
+      {
+        "market_id": "market-001",
+        "market_question": "Will Bitcoin reach $100,000 by end of day?",
+        "recommended_outcome": "Yes",
+        "confidence": 0.55,
+        "reasoning": "Slight bullish tendency but too much uncertainty.",
+        "suggested_position_size": 0.05,
+        "risk_level": "high"
+      }
+    ],
+    "analysis_timestamp": "2024-06-15T12:00:00Z",
+    "markets_analyzed": 4,
+    "overall_market_sentiment": "uncertain"
+  },
+  "high_confidence_suggestion": {
+    "suggestions": [
+      {
+        "market_id": "market-004",
+        "market_question": "Will Fed announce rate cut in next hour?",
+        "recommended_outcome": "No",
+        "confidence": 0.95,
+        "reasoning": "Virtually impossible. No Fed meeting scheduled, no emergency indicators.",
+        "suggested_position_size": 0.20,
+        "risk_level": "very_low"
+      }
+    ],
+    "analysis_timestamp": "2024-06-15T12:00:00Z",
+    "markets_analyzed": 4,
+    "overall_market_sentiment": "stable"
+  },
+  "multiple_suggestions": {
+    "suggestions": [
+      {
+        "market_id": "market-001",
+        "market_question": "Will Bitcoin reach $100,000 by end of day?",
+        "recommended_outcome": "Yes",
+        "confidence": 0.78,
+        "reasoning": "Strong momentum and approaching target.",
+        "suggested_position_size": 0.12,
+        "risk_level": "medium"
+      },
+      {
+        "market_id": "market-004",
+        "market_question": "Will Fed announce rate cut in next hour?",
+        "recommended_outcome": "No",
+        "confidence": 0.92,
+        "reasoning": "No scheduled announcement.",
+        "suggested_position_size": 0.18,
+        "risk_level": "low"
+      },
+      {
+        "market_id": "market-006",
+        "market_question": "Will SOL reach $200 in the next 45 minutes?",
+        "recommended_outcome": "No",
+        "confidence": 0.73,
+        "reasoning": "Price gap too large for timeframe.",
+        "suggested_position_size": 0.10,
+        "risk_level": "medium"
+      }
+    ],
+    "analysis_timestamp": "2024-06-15T12:00:00Z",
+    "markets_analyzed": 4,
+    "overall_market_sentiment": "bullish"
+  }
+}

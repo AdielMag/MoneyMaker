@@ -1,0 +1,120 @@
+{
+  "markets": [
+    {
+      "id": "market-001",
+      "question": "Will Bitcoin reach $100,000 by end of day?",
+      "description": "This market resolves to YES if BTC price reaches $100,000 USD on any major exchange before midnight UTC.",
+      "category": "crypto",
+      "end_date": "2024-06-15T23:59:59Z",
+      "volume": 50000,
+      "liquidity": 25000,
+      "outcomes": [
+        {"name": "Yes", "price": 0.35},
+        {"name": "No", "price": 0.65}
+      ],
+      "created_at": "2024-06-15T10:00:00Z",
+      "passes_filter": true,
+      "time_to_resolution_hours": 0.5
+    },
+    {
+      "id": "market-002",
+      "question": "Will ETH flip BTC market cap today?",
+      "description": "This market resolves to YES if Ethereum market cap exceeds Bitcoin market cap at any point today.",
+      "category": "crypto",
+      "end_date": "2024-06-15T23:59:59Z",
+      "volume": 75000,
+      "liquidity": 40000,
+      "outcomes": [
+        {"name": "Yes", "price": 0.05},
+        {"name": "No", "price": 0.95}
+      ],
+      "created_at": "2024-06-15T08:00:00Z",
+      "passes_filter": false,
+      "time_to_resolution_hours": 0.75,
+      "filter_reason": "Price too extreme (5%)"
+    },
+    {
+      "id": "market-003",
+      "question": "Will the Lakers win tonight's game?",
+      "description": "This market resolves based on the official NBA game result.",
+      "category": "sports",
+      "end_date": "2024-06-15T22:00:00Z",
+      "volume": 100000,
+      "liquidity": 60000,
+      "outcomes": [
+        {"name": "Yes", "price": 0.55},
+        {"name": "No", "price": 0.45}
+      ],
+      "created_at": "2024-06-14T12:00:00Z",
+      "passes_filter": false,
+      "time_to_resolution_hours": 0.25,
+      "filter_reason": "Excluded category (sports)"
+    },
+    {
+      "id": "market-004",
+      "question": "Will Fed announce rate cut in next hour?",
+      "description": "This market resolves to YES if the Federal Reserve announces an interest rate cut within the next hour.",
+      "category": "politics",
+      "end_date": "2024-06-15T13:00:00Z",
+      "volume": 200000,
+      "liquidity": 100000,
+      "outcomes": [
+        {"name": "Yes", "price": 0.15},
+        {"name": "No", "price": 0.85}
+      ],
+      "created_at": "2024-06-15T11:30:00Z",
+      "passes_filter": true,
+      "time_to_resolution_hours": 0.5
+    },
+    {
+      "id": "market-005",
+      "question": "Will Tesla stock close above $200 today?",
+      "description": "This market resolves based on TSLA closing price on NASDAQ.",
+      "category": "stocks",
+      "end_date": "2024-06-15T20:00:00Z",
+      "volume": 500,
+      "liquidity": 200,
+      "outcomes": [
+        {"name": "Yes", "price": 0.60},
+        {"name": "No", "price": 0.40}
+      ],
+      "created_at": "2024-06-15T09:00:00Z",
+      "passes_filter": false,
+      "time_to_resolution_hours": 1.5,
+      "filter_reason": "Volume too low (500 < 1000)"
+    },
+    {
+      "id": "market-006",
+      "question": "Will SOL reach $200 in the next 45 minutes?",
+      "description": "Resolves YES if Solana price hits $200 on Binance within 45 minutes.",
+      "category": "crypto",
+      "end_date": "2024-06-15T12:45:00Z",
+      "volume": 30000,
+      "liquidity": 15000,
+      "outcomes": [
+        {"name": "Yes", "price": 0.25},
+        {"name": "No", "price": 0.75}
+      ],
+      "created_at": "2024-06-15T11:45:00Z",
+      "passes_filter": true,
+      "time_to_resolution_hours": 0.75
+    },
+    {
+      "id": "market-007",
+      "question": "Will there be breaking news about AI regulation today?",
+      "description": "Resolves YES if major news outlet reports on new AI regulation.",
+      "category": "tech",
+      "end_date": "2024-06-16T12:00:00Z",
+      "volume": 45000,
+      "liquidity": 20000,
+      "outcomes": [
+        {"name": "Yes", "price": 0.40},
+        {"name": "No", "price": 0.60}
+      ],
+      "created_at": "2024-06-15T06:00:00Z",
+      "passes_filter": false,
+      "time_to_resolution_hours": 6,
+      "filter_reason": "Time to resolution too long (6h > 1h)"
+    }
+  ]
+}

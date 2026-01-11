@@ -1,0 +1,29 @@
+[run]
+branch = True
+source = shared,services
+omit = 
+    */tests/*
+    */__pycache__/*
+    */venv/*
+    */.venv/*
+    */site-packages/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if TYPE_CHECKING:
+    if __name__ == .__main__.:
+    @abstractmethod
+    @abc.abstractmethod
+fail_under = 80
+show_missing = True
+precision = 2
+
+[html]
+directory = coverage_html
+title = MoneyMaker Coverage Report
+
+[xml]
+output = coverage.xml

@@ -1,0 +1,151 @@
+# Cloud Build configuration for MoneyMaker
+# Builds and pushes all service Docker images
+
+steps:
+  # Run tests first
+  - name: 'python:3.11-slim'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install -r requirements.txt -r requirements-dev.txt
+        pytest tests/unit -v --tb=short
+    id: 'test'
+
+  # Build orchestrator
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGISTRY}/orchestrator:${_TAG}'
+      - '-t'
+      - '${_REGISTRY}/orchestrator:latest'
+      - '-f'
+      - 'services/orchestrator/Dockerfile'
+      - '.'
+    id: 'build-orchestrator'
+    waitFor: ['test']
+
+  # Build scraper
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGISTRY}/scraper:${_TAG}'
+      - '-t'
+      - '${_REGISTRY}/scraper:latest'
+      - '-f'
+      - 'services/scraper/Dockerfile'
+      - '.'
+    id: 'build-scraper'
+    waitFor: ['test']
+
+  # Build AI suggester
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGISTRY}/ai-suggester:${_TAG}'
+      - '-t'
+      - '${_REGISTRY}/ai-suggester:latest'
+      - '-f'
+      - 'services/ai_suggester/Dockerfile'
+      - '.'
+    id: 'build-ai-suggester'
+    waitFor: ['test']
+
+  # Build trader
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGISTRY}/trader:${_TAG}'
+      - '-t'
+      - '${_REGISTRY}/trader:latest'
+      - '-f'
+      - 'services/trader/Dockerfile'
+      - '.'
+    id: 'build-trader'
+    waitFor: ['test']
+
+  # Build monitor
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGISTRY}/monitor:${_TAG}'
+      - '-t'
+      - '${_REGISTRY}/monitor:latest'
+      - '-f'
+      - 'services/monitor/Dockerfile'
+      - '.'
+    id: 'build-monitor'
+    waitFor: ['test']
+
+  # Push all images
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/orchestrator:${_TAG}']
+    id: 'push-orchestrator'
+    waitFor: ['build-orchestrator']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/orchestrator:latest']
+    waitFor: ['build-orchestrator']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/scraper:${_TAG}']
+    id: 'push-scraper'
+    waitFor: ['build-scraper']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/scraper:latest']
+    waitFor: ['build-scraper']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/ai-suggester:${_TAG}']
+    id: 'push-ai-suggester'
+    waitFor: ['build-ai-suggester']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/ai-suggester:latest']
+    waitFor: ['build-ai-suggester']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/trader:${_TAG}']
+    id: 'push-trader'
+    waitFor: ['build-trader']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/trader:latest']
+    waitFor: ['build-trader']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/monitor:${_TAG}']
+    id: 'push-monitor'
+    waitFor: ['build-monitor']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/monitor:latest']
+    waitFor: ['build-monitor']
+
+substitutions:
+  _REGISTRY: 'us-central1-docker.pkg.dev/${PROJECT_ID}/moneymaker'
+  _TAG: 'latest'
+
+images:
+  - '${_REGISTRY}/orchestrator:${_TAG}'
+  - '${_REGISTRY}/orchestrator:latest'
+  - '${_REGISTRY}/scraper:${_TAG}'
+  - '${_REGISTRY}/scraper:latest'
+  - '${_REGISTRY}/ai-suggester:${_TAG}'
+  - '${_REGISTRY}/ai-suggester:latest'
+  - '${_REGISTRY}/trader:${_TAG}'
+  - '${_REGISTRY}/trader:latest'
+  - '${_REGISTRY}/monitor:${_TAG}'
+  - '${_REGISTRY}/monitor:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+timeout: '1800s'
