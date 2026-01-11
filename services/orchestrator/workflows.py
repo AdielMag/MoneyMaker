@@ -76,9 +76,7 @@ class DiscoveryWorkflow:
                 )
 
             # Step 2: Get tradeable markets
-            markets = await self.scraper.get_tradeable_markets(
-                max_markets=self.settings.ai.max_suggestions * 3,
-            )
+            markets = await self.scraper.get_tradeable_markets(max_markets=100)
             markets_analyzed = len(markets)
 
             if not markets:
