@@ -58,6 +58,7 @@ jobs:
           pytest tests/unit -v \
             --cov=shared \
             --cov=services \
+            --cov-branch \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-fail-under=80
@@ -75,14 +76,13 @@ jobs:
         env:
           ENVIRONMENT: test
       
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           fail_ci_if_error: false
           verbose: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       
       - name: Coverage comment on PR
         if: github.event_name == 'pull_request'
