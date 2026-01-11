@@ -71,34 +71,29 @@ jobs:
           GEMINI_API_KEY: test-gemini-key
       
       - name: Run integration tests
-        run: pytest tests/integration -v -m integration
+        run: pytest tests/integration -v -m integration --no-cov
         continue-on-error: true
         env:
           ENVIRONMENT: test
       
-      - name: Debug - Show coverage file
+      - name: Prepare and upload coverage to Codecov
         run: |
-          echo "=== Coverage file exists? ==="
-          ls -la coverage.xml || echo "coverage.xml not found!"
-          echo ""
           echo "=== Coverage summary from pytest ==="
-          # Show the line-rate (coverage percentage) from the XML
           grep -o 'line-rate="[^"]*"' coverage.xml | head -1
-          echo ""
-          echo "=== Source paths in coverage.xml ==="
-          grep -A5 '<sources>' coverage.xml || true
-          echo ""
-          echo "=== First 100 lines of coverage.xml ==="
-          head -100 coverage.xml || true
-          echo ""
-          echo "=== File structure ==="
-          ls -la shared/ services/
-      
+          
+          # Rename to prevent Codecov CLI from overwriting it
+          mv coverage.xml pytest-coverage.xml
+          
+          # Delete .coverage file so pycoverage plugin has nothing to regenerate from
+          rm -f .coverage
+          
+          echo "=== Uploading pytest-coverage.xml ==="
+        
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
+          files: ./pytest-coverage.xml
           flags: unit
           name: codecov-moneymaker
           fail_ci_if_error: true
