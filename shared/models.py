@@ -4,7 +4,7 @@ Pydantic models for MoneyMaker.
 Defines all data models used across services.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -97,12 +97,12 @@ class Market(BaseModel):
 
     def compute_time_to_resolution(self) -> float:
         """Calculate hours until market resolution."""
-        now = datetime.now(datetime.UTC)
+        now = datetime.now(timezone.utc)
         # Handle both timezone-aware and naive end_dates
         end_date = self.end_date
         if end_date.tzinfo is None:
             # If end_date is naive, assume UTC
-            end_date = end_date.replace(tzinfo=datetime.UTC)
+            end_date = end_date.replace(tzinfo=timezone.utc)
         if end_date <= now:
             return 0.0
         delta = end_date - now

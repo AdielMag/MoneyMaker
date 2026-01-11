@@ -152,14 +152,15 @@ class TestGetMarkets:
         ]
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(polymarket_client, "client") as mock_client:
-            mock_client.get = AsyncMock(return_value=mock_response)
+        mock_http_client = MagicMock()
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+        polymarket_client._client = mock_http_client
 
-            markets = await polymarket_client.get_markets(limit=10)
+        markets = await polymarket_client.get_markets(limit=10)
 
-            assert len(markets) == 2
-            assert markets[0].id == "market-001"
-            assert markets[1].id == "market-002"
+        assert len(markets) == 2
+        assert markets[0].id == "market-001"
+        assert markets[1].id == "market-002"
 
     @pytest.mark.asyncio
     async def test_get_markets_empty(self, polymarket_client):
@@ -169,23 +170,25 @@ class TestGetMarkets:
         mock_response.json.return_value = []
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(polymarket_client, "client") as mock_client:
-            mock_client.get = AsyncMock(return_value=mock_response)
+        mock_http_client = MagicMock()
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+        polymarket_client._client = mock_http_client
 
-            markets = await polymarket_client.get_markets()
+        markets = await polymarket_client.get_markets()
 
-            assert markets == []
+        assert markets == []
 
     @pytest.mark.asyncio
     async def test_get_markets_error(self, polymarket_client):
         """Test markets fetch error handling."""
-        with patch.object(polymarket_client, "client") as mock_client:
-            mock_client.get = AsyncMock(side_effect=httpx.RequestError("Connection failed"))
+        mock_http_client = MagicMock()
+        mock_http_client.get = AsyncMock(side_effect=httpx.RequestError("Connection failed"))
+        polymarket_client._client = mock_http_client
 
-            with pytest.raises(PolymarketAPIError) as exc_info:
-                await polymarket_client.get_markets()
+        with pytest.raises(PolymarketAPIError) as exc_info:
+            await polymarket_client.get_markets()
 
-            assert "Failed to get markets" in str(exc_info.value)
+        assert "Failed to get markets" in str(exc_info.value)
 
 
 class TestGetMarket:
@@ -203,13 +206,14 @@ class TestGetMarket:
         }
         mock_response.raise_for_status = MagicMock()
 
-        with patch.object(polymarket_client, "client") as mock_client:
-            mock_client.get = AsyncMock(return_value=mock_response)
+        mock_http_client = MagicMock()
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+        polymarket_client._client = mock_http_client
 
-            market = await polymarket_client.get_market("market-001")
+        market = await polymarket_client.get_market("market-001")
 
-            assert market is not None
-            assert market.id == "market-001"
+        assert market is not None
+        assert market.id == "market-001"
 
     @pytest.mark.asyncio
     async def test_get_market_not_found(self, polymarket_client):
@@ -217,12 +221,13 @@ class TestGetMarket:
         mock_response = MagicMock()
         mock_response.status_code = 404
 
-        with patch.object(polymarket_client, "client") as mock_client:
-            mock_client.get = AsyncMock(return_value=mock_response)
+        mock_http_client = MagicMock()
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+        polymarket_client._client = mock_http_client
 
-            market = await polymarket_client.get_market("nonexistent")
+        market = await polymarket_client.get_market("nonexistent")
 
-            assert market is None
+        assert market is None
 
 
 class TestGetBalance:

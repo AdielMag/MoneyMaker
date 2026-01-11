@@ -238,10 +238,20 @@ Markets to Analyze:
             suggestions = []
             for item in data.get("suggestions", []):
                 try:
+                    # Skip suggestions missing required fields
+                    market_id = item.get("market_id", "")
+                    recommended_outcome = item.get("recommended_outcome", "")
+                    if not market_id or not recommended_outcome:
+                        logger.warning(
+                            "skipping_invalid_suggestion",
+                            reason="missing market_id or recommended_outcome",
+                        )
+                        continue
+                    
                     suggestion = AISuggestion(
-                        market_id=item.get("market_id", ""),
+                        market_id=market_id,
                         market_question=item.get("market_question", ""),
-                        recommended_outcome=item.get("recommended_outcome", ""),
+                        recommended_outcome=recommended_outcome,
                         confidence=float(item.get("confidence", 0)),
                         reasoning=item.get("reasoning", ""),
                         suggested_position_size=float(item.get("suggested_position_size", 0.1)),

@@ -145,11 +145,22 @@ class TestSettings:
 
     def test_default_values(self):
         """Test default settings values."""
-        settings = Settings()
-        assert settings.environment == "development"
-        assert settings.gcp_project_id == ""
-        assert settings.real_money_enabled is False
-        assert settings.fake_money_enabled is True
+        # Clear environment variables to test actual defaults
+        env_backup = {}
+        for key in ["ENVIRONMENT", "GCP_PROJECT_ID"]:
+            if key in os.environ:
+                env_backup[key] = os.environ.pop(key)
+        
+        try:
+            reset_settings()
+            settings = Settings()
+            assert settings.environment == "development"
+            assert settings.gcp_project_id == ""
+            assert settings.real_money_enabled is False
+            assert settings.fake_money_enabled is True
+        finally:
+            # Restore environment variables
+            os.environ.update(env_backup)
 
     def test_environment_validation_valid(self):
         """Test valid environment values."""
