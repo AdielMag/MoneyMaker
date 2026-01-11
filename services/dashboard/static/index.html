@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoneyMaker Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2332;
+            --bg-card-hover: #222d3f;
+            --accent: #00d9ff;
+            --accent-dim: #00d9ff33;
+            --accent-glow: #00d9ff55;
+            --success: #10b981;
+            --success-dim: #10b98133;
+            --danger: #ef4444;
+            --danger-dim: #ef444433;
+            --warning: #f59e0b;
+            --warning-dim: #f59e0b33;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 20%, var(--accent-dim) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, #6366f122 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg-primary) 0%, #0f172a 100%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .logo h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo span {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--success); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 8px transparent; }
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            animation: slideUp 0.5s ease forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .summary-card:nth-child(1) { animation-delay: 0.1s; }
+        .summary-card:nth-child(2) { animation-delay: 0.2s; }
+        .summary-card:nth-child(3) { animation-delay: 0.3s; }
+        .summary-card:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .summary-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-dim);
+            transform: translateY(-4px);
+        }
+
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .summary-card:hover::before {
+            opacity: 1;
+        }
+
+        .summary-card .icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .summary-card.balance .icon { background: var(--accent-dim); }
+        .summary-card.positions .icon { background: #8b5cf633; }
+        .summary-card.pnl .icon { background: var(--success-dim); }
+        .summary-card.markets .icon { background: var(--warning-dim); }
+
+        .summary-card .label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .summary-card .value.positive { color: var(--success); }
+        .summary-card .value.negative { color: var(--danger); }
+
+        .summary-card .sub-value {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 2rem;
+            animation: fadeIn 0.6s ease forwards;
+            opacity: 0;
+        }
+
+        .section:nth-of-type(1) { animation-delay: 0.5s; }
+        .section:nth-of-type(2) { animation-delay: 0.6s; }
+        .section:nth-of-type(3) { animation-delay: 0.7s; }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .refresh-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--accent);
+            border-color: var(--accent-dim);
+        }
+
+        .refresh-btn.loading svg {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tables */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem 1.25rem;
+            text-align: left;
+        }
+
+        th {
+            background: var(--bg-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-card-hover);
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        td {
+            font-size: 0.9375rem;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+        .text-muted { color: var(--text-muted); }
+        .text-accent { color: var(--accent); }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-success {
+            background: var(--success-dim);
+            color: var(--success);
+        }
+
+        .badge-danger {
+            background: var(--danger-dim);
+            color: var(--danger);
+        }
+
+        .badge-warning {
+            background: var(--warning-dim);
+            color: var(--warning);
+        }
+
+        .badge-info {
+            background: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        /* Progress bars */
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #6366f1);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        /* AI Suggestions Cards */
+        .suggestions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1rem;
+        }
+
+        .suggestion-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-card:hover {
+            border-color: var(--accent-dim);
+            transform: translateY(-2px);
+        }
+
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .suggestion-market {
+            font-size: 0.9375rem;
+            font-weight: 500;
+            line-height: 1.4;
+            flex: 1;
+            padding-right: 1rem;
+        }
+
+        .confidence-ring {
+            width: 56px;
+            height: 56px;
+            position: relative;
+        }
+
+        .confidence-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .confidence-ring circle {
+            fill: none;
+            stroke-width: 4;
+        }
+
+        .confidence-ring .bg {
+            stroke: var(--bg-secondary);
+        }
+
+        .confidence-ring .fill {
+            stroke: var(--accent);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease;
+        }
+
+        .confidence-ring .value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .suggestion-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .suggestion-reasoning {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-card-hover) 50%, var(--bg-card) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-line {
+            height: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .skeleton-line:last-child {
+            width: 60%;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .summary-card .value {
+                font-size: 1.5rem;
+            }
+
+            th, td {
+                padding: 0.75rem;
+            }
+
+            .suggestions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 100;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+            bottom: calc(100% + 8px);
+        }
+
+        /* Last updated */
+        .last-updated {
+            text-align: center;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">💰</div>
+                <div>
+                    <h1>MoneyMaker</h1>
+                    <span>Paper Trading Dashboard</span>
+                </div>
+            </div>
+            <div class="status-badge">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="summary-grid">
+            <div class="summary-card balance">
+                <div class="icon">💵</div>
+                <div class="label">Wallet Balance</div>
+                <div class="value" id="balanceValue">$---.--</div>
+                <div class="sub-value">USDC available for trading</div>
+            </div>
+            <div class="summary-card positions">
+                <div class="icon">📊</div>
+                <div class="label">Open Positions</div>
+                <div class="value" id="positionsCount">--</div>
+                <div class="sub-value" id="positionsValue">Total value: $--.--</div>
+            </div>
+            <div class="summary-card pnl">
+                <div class="icon">📈</div>
+                <div class="label">Total P&L</div>
+                <div class="value" id="pnlValue">$--.--</div>
+                <div class="sub-value" id="pnlPercent">--% overall</div>
+            </div>
+            <div class="summary-card markets">
+                <div class="icon">🎯</div>
+                <div class="label">Filtered Markets</div>
+                <div class="value" id="marketsCount">--</div>
+                <div class="sub-value">Matching criteria</div>
+            </div>
+        </div>
+
+        <!-- Positions Section -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Open Positions</h2>
+                <button class="refresh-btn" onclick="refreshData()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                        <path d="M21 3v5h-5"/>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market</th>
+                            <th>Outcome</th>
+                            <th>Entry</th>
+                            <th>Current</th>
+                            <th>Quantity</th>
+                            <th>Value</th>
+                            <th>P&L</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positionsTable">
+                        <tr>
+                            <td colspan="8" class="empty-state">
+                                <div class="skeleton skeleton-line"></div>
+                                <div class="skeleton skeleton-line"></div>
+                                <div class="skeleton skeleton-line"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Markets Section -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Available Markets</h2>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Question</th>
+                            <th>Category</th>
+                            <th>Yes Price</th>
+                            <th>No Price</th>
+                            <th>Volume</th>
+                            <th>Liquidity</th>
+                            <th>Resolves In</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="marketsTable">
+                        <tr>
+                            <td colspan="8" class="empty-state">
+                                <div class="skeleton skeleton-line"></div>
+                                <div class="skeleton skeleton-line"></div>
+                                <div class="skeleton skeleton-line"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- AI Suggestions Section -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">AI Suggestions</h2>
+            </div>
+            <div class="suggestions-grid" id="suggestionsGrid">
+                <div class="suggestion-card">
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-line"></div>
+                    <div class="skeleton skeleton-line"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="last-updated">
+            Last updated: <span id="lastUpdated">--</span>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        let ORCHESTRATOR_URL = '';
+        
+        // Initialize
+        async function init() {
+            try {
+                // Get config from backend
+                const configRes = await fetch('/config');
+                const config = await configRes.json();
+                ORCHESTRATOR_URL = config.orchestrator_url;
+                
+                // Initial data load
+                await refreshData();
+                
+                // Auto-refresh every 30 seconds
+                setInterval(refreshData, 30000);
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                setStatus('error', 'Configuration Error');
+            }
+        }
+
+        // Set status indicator
+        function setStatus(status, text) {
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            dot.style.background = status === 'ok' ? 'var(--success)' : 
+                                   status === 'loading' ? 'var(--warning)' : 'var(--danger)';
+            statusText.textContent = text;
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2
+            }).format(amount);
+        }
+
+        // Format percentage
+        function formatPercent(value) {
+            const sign = value >= 0 ? '+' : '';
+            return `${sign}${value.toFixed(2)}%`;
+        }
+
+        // Format time remaining
+        function formatTimeRemaining(hours) {
+            if (hours < 1) {
+                return `${Math.round(hours * 60)}m`;
+            } else if (hours < 24) {
+                return `${hours.toFixed(1)}h`;
+            } else {
+                return `${Math.round(hours / 24)}d`;
+            }
+        }
+
+        // Create confidence ring SVG
+        function createConfidenceRing(confidence) {
+            const percent = confidence * 100;
+            const circumference = 2 * Math.PI * 24;
+            const offset = circumference - (percent / 100) * circumference;
+            
+            return `
+                <div class="confidence-ring">
+                    <svg width="56" height="56" viewBox="0 0 56 56">
+                        <circle class="bg" cx="28" cy="28" r="24"/>
+                        <circle class="fill" cx="28" cy="28" r="24"
+                            stroke-dasharray="${circumference}"
+                            stroke-dashoffset="${offset}"/>
+                    </svg>
+                    <span class="value">${Math.round(percent)}%</span>
+                </div>
+            `;
+        }
+
+        // Get risk badge
+        function getRiskBadge(risk) {
+            const colors = {
+                'very_low': 'success',
+                'low': 'success',
+                'medium': 'warning',
+                'high': 'danger',
+                'very_high': 'danger'
+            };
+            return `<span class="badge badge-${colors[risk] || 'info'}">${risk.replace('_', ' ')}</span>`;
+        }
+
+        // Refresh all data
+        async function refreshData() {
+            const refreshBtn = document.querySelector('.refresh-btn');
+            refreshBtn.classList.add('loading');
+            setStatus('loading', 'Refreshing...');
+            
+            try {
+                // Fetch all data in parallel
+                const [balanceData, positionsData, marketsData, statusData] = await Promise.all([
+                    fetchData('/balance/fake'),
+                    fetchData('/positions/fake'),
+                    fetchData('/markets?limit=20'),
+                    fetchData('/status')
+                ]);
+                
+                // Update UI
+                updateBalance(balanceData);
+                updatePositions(positionsData);
+                updateMarkets(marketsData);
+                updateSuggestions(statusData);
+                
+                // Update timestamp
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+                setStatus('ok', 'Live');
+            } catch (error) {
+                console.error('Failed to refresh data:', error);
+                setStatus('error', 'Connection Error');
+            } finally {
+                refreshBtn.classList.remove('loading');
+            }
+        }
+
+        // Fetch data from orchestrator
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`${ORCHESTRATOR_URL}${endpoint}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Failed to fetch ${endpoint}:`, error);
+                return null;
+            }
+        }
+
+        // Update balance card
+        function updateBalance(data) {
+            const el = document.getElementById('balanceValue');
+            if (data && data.balance !== undefined) {
+                el.textContent = formatCurrency(data.balance);
+            } else {
+                el.textContent = '$0.00';
+            }
+        }
+
+        // Update positions
+        function updatePositions(data) {
+            const tableBody = document.getElementById('positionsTable');
+            const countEl = document.getElementById('positionsCount');
+            const valueEl = document.getElementById('positionsValue');
+            const pnlEl = document.getElementById('pnlValue');
+            const pnlPercentEl = document.getElementById('pnlPercent');
+            
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                countEl.textContent = '0';
+                valueEl.textContent = 'Total value: $0.00';
+                pnlEl.textContent = '$0.00';
+                pnlPercentEl.textContent = '0.00% overall';
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M3 3v18h18"/>
+                                <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                            </svg>
+                            <h3>No Open Positions</h3>
+                            <p>Positions will appear here when the trading workflow executes.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Calculate totals
+            const totalValue = data.reduce((sum, p) => sum + (p.current_value || 0), 0);
+            const totalEntryValue = data.reduce((sum, p) => sum + (p.entry_value || 0), 0);
+            const totalPnL = totalValue - totalEntryValue;
+            const totalPnLPercent = totalEntryValue > 0 ? (totalPnL / totalEntryValue) * 100 : 0;
+            
+            countEl.textContent = data.length;
+            valueEl.textContent = `Total value: ${formatCurrency(totalValue)}`;
+            pnlEl.textContent = formatCurrency(totalPnL);
+            pnlEl.className = `value ${totalPnL >= 0 ? 'positive' : 'negative'}`;
+            pnlPercentEl.textContent = `${formatPercent(totalPnLPercent)} overall`;
+            
+            // Build table rows
+            tableBody.innerHTML = data.map(position => {
+                const pnl = position.pnl_percent || 0;
+                const pnlClass = pnl >= 0 ? 'text-success' : 'text-danger';
+                
+                let status = '';
+                if (position.should_take_profit) {
+                    status = '<span class="badge badge-success">Take Profit</span>';
+                } else if (position.should_stop_loss) {
+                    status = '<span class="badge badge-danger">Stop Loss</span>';
+                } else {
+                    status = '<span class="badge badge-info">Holding</span>';
+                }
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="tooltip" data-tip="${position.market_question || position.market_id}">
+                                ${truncate(position.market_question || position.market_id, 40)}
+                            </div>
+                        </td>
+                        <td><span class="badge badge-info">${position.outcome}</span></td>
+                        <td class="mono">${(position.entry_price * 100).toFixed(1)}¢</td>
+                        <td class="mono">${(position.current_price * 100).toFixed(1)}¢</td>
+                        <td class="mono">${position.quantity}</td>
+                        <td class="mono">${formatCurrency(position.current_value)}</td>
+                        <td class="mono ${pnlClass}">${formatPercent(pnl)}</td>
+                        <td>${status}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update markets
+        function updateMarkets(data) {
+            const tableBody = document.getElementById('marketsTable');
+            const countEl = document.getElementById('marketsCount');
+            
+            // Handle different response formats
+            let markets = [];
+            if (Array.isArray(data)) {
+                markets = data;
+            } else if (data && data.markets) {
+                markets = data.markets;
+            }
+            
+            countEl.textContent = markets.length;
+            
+            if (markets.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="M21 21l-4.35-4.35"/>
+                            </svg>
+                            <h3>No Markets Found</h3>
+                            <p>No markets matching the filter criteria.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableBody.innerHTML = markets.map(market => {
+                const yesPrice = market.outcomes?.find(o => o.name.toLowerCase() === 'yes')?.price || 0;
+                const noPrice = market.outcomes?.find(o => o.name.toLowerCase() === 'no')?.price || 0;
+                const timeLeft = market.time_to_resolution_hours || 0;
+                
+                let statusBadge = '';
+                if (!market.passes_filter) {
+                    statusBadge = `<span class="badge badge-warning tooltip" data-tip="${market.filter_reason || 'Filtered'}">Filtered</span>`;
+                } else {
+                    statusBadge = '<span class="badge badge-success">Active</span>';
+                }
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="tooltip" data-tip="${market.question}">
+                                ${truncate(market.question, 50)}
+                            </div>
+                        </td>
+                        <td><span class="badge badge-info">${market.category || 'N/A'}</span></td>
+                        <td class="mono text-success">${(yesPrice * 100).toFixed(1)}¢</td>
+                        <td class="mono text-danger">${(noPrice * 100).toFixed(1)}¢</td>
+                        <td class="mono">${formatNumber(market.volume)}</td>
+                        <td class="mono">${formatNumber(market.liquidity)}</td>
+                        <td class="mono">${formatTimeRemaining(timeLeft)}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update AI suggestions
+        function updateSuggestions(statusData) {
+            const grid = document.getElementById('suggestionsGrid');
+            
+            // Try to get suggestions from status or use empty array
+            let suggestions = [];
+            if (statusData && statusData.last_suggestions) {
+                suggestions = statusData.last_suggestions;
+            }
+            
+            if (suggestions.length === 0) {
+                grid.innerHTML = `
+                    <div class="suggestion-card">
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                            <h3>No AI Suggestions</h3>
+                            <p>Run the discovery workflow to generate AI trading suggestions.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = suggestions.map(suggestion => `
+                <div class="suggestion-card">
+                    <div class="suggestion-header">
+                        <div class="suggestion-market">${suggestion.market_question || suggestion.market_id}</div>
+                        ${createConfidenceRing(suggestion.confidence)}
+                    </div>
+                    <div class="suggestion-meta">
+                        <span class="badge badge-info">${suggestion.recommended_outcome}</span>
+                        ${getRiskBadge(suggestion.risk_level)}
+                        <span class="badge badge-warning">${(suggestion.suggested_position_size * 100).toFixed(0)}% size</span>
+                    </div>
+                    <div class="suggestion-reasoning">${suggestion.reasoning}</div>
+                </div>
+            `).join('');
+        }
+
+        // Utility functions
+        function truncate(str, len) {
+            if (!str) return '';
+            return str.length > len ? str.substring(0, len) + '...' : str;
+        }
+
+        function formatNumber(num) {
+            if (!num) return '0';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>

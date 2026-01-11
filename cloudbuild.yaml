@@ -82,6 +82,20 @@ steps:
     id: 'build-monitor'
     waitFor: ['test']
 
+  # Build dashboard
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGISTRY}/dashboard:${_TAG}'
+      - '-t'
+      - '${_REGISTRY}/dashboard:latest'
+      - '-f'
+      - 'services/dashboard/Dockerfile'
+      - '.'
+    id: 'build-dashboard'
+    waitFor: ['test']
+
   # Push all images
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${_REGISTRY}/orchestrator:${_TAG}']
@@ -128,6 +142,15 @@ steps:
     args: ['push', '${_REGISTRY}/monitor:latest']
     waitFor: ['build-monitor']
 
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/dashboard:${_TAG}']
+    id: 'push-dashboard'
+    waitFor: ['build-dashboard']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGISTRY}/dashboard:latest']
+    waitFor: ['build-dashboard']
+
 substitutions:
   _REGISTRY: 'us-central1-docker.pkg.dev/${PROJECT_ID}/moneymaker'
   _TAG: 'latest'
@@ -143,6 +166,8 @@ images:
   - '${_REGISTRY}/trader:latest'
   - '${_REGISTRY}/monitor:${_TAG}'
   - '${_REGISTRY}/monitor:latest'
+  - '${_REGISTRY}/dashboard:${_TAG}'
+  - '${_REGISTRY}/dashboard:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY

@@ -185,14 +185,17 @@ switch ($Service.ToLower()) {
     "monitor" { 
         if (Deploy-Service -ServiceName "monitor") { $deployedCount++ } else { $failedCount++ }
     }
+    "dashboard" { 
+        if (Deploy-Service -ServiceName "dashboard") { $deployedCount++ } else { $failedCount++ }
+    }
     "all" {
-        foreach ($svc in @("orchestrator", "scraper", "ai_suggester", "trader", "monitor")) {
+        foreach ($svc in @("orchestrator", "scraper", "ai_suggester", "trader", "monitor", "dashboard")) {
             if (Deploy-Service -ServiceName $svc) { $deployedCount++ } else { $failedCount++ }
         }
     }
     default {
         Write-Host "Unknown service: $Service" -ForegroundColor Red
-        Write-Host "Available: orchestrator, scraper, ai_suggester, trader, monitor, all"
+        Write-Host "Available: orchestrator, scraper, ai_suggester, trader, monitor, dashboard, all"
         exit 1
     }
 }

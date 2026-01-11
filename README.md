@@ -58,7 +58,7 @@ MoneyMaker is an automated trading system for [Polymarket](https://polymarket.co
 - **Real Trading Mode** - Execute actual trades on Polymarket (when enabled)
 - **Risk Management** - Configurable stop-loss and take-profit thresholds
 - **RESTful API** - Query markets, positions, and trigger workflows on demand
-- **Microservices Architecture** - 5 independent services deployed on Cloud Run
+- **Microservices Architecture** - 6 independent services deployed on Cloud Run
 - **CI/CD Pipeline** - Automated testing and deployment via GitHub Actions
 
 ---
@@ -88,6 +88,11 @@ MoneyMaker is an automated trading system for [Polymarket](https://polymarket.co
 │ Polymarket │  │  Gemini    │  │         Firestore           │
 │    API     │  │  1.5 Pro   │  │  (Positions, Wallets, etc)  │
 └────────────┘  └────────────┘  └─────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Dashboard Service                               │
+│         (Web UI - fetches data from Orchestrator API)                │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Services
@@ -99,6 +104,7 @@ MoneyMaker is an automated trading system for [Polymarket](https://polymarket.co
 | **AI Suggester** | Gemini-powered market analysis and suggestions |
 | **Trader** | Order execution for real/fake trading |
 | **Monitor** | Position monitoring and automatic sell triggers |
+| **Dashboard** | Web UI for viewing fake trading data and metrics |
 
 > All services run on Cloud Run with port 8080 and auto-scale to zero when idle.
 
@@ -253,6 +259,20 @@ ai:
 | `GET` | `/config` | Get system configuration |
 | `GET` | `/docs` | Interactive API documentation |
 
+### Dashboard
+
+The dashboard service provides a web interface for monitoring fake trading activity.
+
+**URL:** `https://YOUR-DASHBOARD-URL/`
+
+**Features:**
+- Real-time wallet balance display
+- Open positions with P&L tracking
+- Filtered markets overview
+- AI suggestions with confidence scores
+- Auto-refresh every 30 seconds
+- Responsive design with dark theme
+
 ### Example Requests
 
 **PowerShell:**
@@ -388,7 +408,8 @@ MoneyMaker/
 │   ├── scraper/          # Market data scraping
 │   ├── ai_suggester/     # Gemini AI integration
 │   ├── trader/           # Order execution
-│   └── monitor/          # Position monitoring
+│   ├── monitor/          # Position monitoring
+│   └── dashboard/        # Web UI dashboard
 ├── shared/               # Shared utilities and clients
 │   ├── config.py         # Configuration management
 │   ├── models.py         # Pydantic data models

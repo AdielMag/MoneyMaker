@@ -100,16 +100,20 @@ case $SERVICE in
     "monitor")
         deploy_service "monitor" 8004
         ;;
+    "dashboard")
+        deploy_service "dashboard" 8005
+        ;;
     "all")
         deploy_service "orchestrator" 8000
         deploy_service "scraper" 8001
         deploy_service "ai_suggester" 8002
         deploy_service "trader" 8003
         deploy_service "monitor" 8004
+        deploy_service "dashboard" 8005
         ;;
     *)
         echo -e "${RED}Unknown service: $SERVICE${NC}"
-        echo "Available services: orchestrator, scraper, ai_suggester, trader, monitor, all"
+        echo "Available services: orchestrator, scraper, ai_suggester, trader, monitor, dashboard, all"
         exit 1
         ;;
 esac
