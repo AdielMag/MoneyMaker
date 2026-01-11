@@ -80,25 +80,29 @@ jobs:
         run: |
           echo "=== Coverage file exists? ==="
           ls -la coverage.xml || echo "coverage.xml not found!"
-          echo "=== First 50 lines of coverage.xml ==="
-          head -50 coverage.xml || true
+          echo ""
+          echo "=== Coverage summary from pytest ==="
+          # Show the line-rate (coverage percentage) from the XML
+          grep -o 'line-rate="[^"]*"' coverage.xml | head -1
+          echo ""
+          echo "=== Source paths in coverage.xml ==="
+          grep -A5 '<sources>' coverage.xml || true
+          echo ""
+          echo "=== First 100 lines of coverage.xml ==="
+          head -100 coverage.xml || true
+          echo ""
+          echo "=== File structure ==="
+          ls -la shared/ services/
       
       - name: Upload coverage to Codecov
-        run: |
-          # Download codecov uploader
-          curl -Os https://cli.codecov.io/latest/linux/codecov
-          chmod +x codecov
-          # Upload without running any plugins (--disable-search prevents file regeneration)
-          ./codecov do-upload \
-            --report-type coverage \
-            --file coverage.xml \
-            --flag unit \
-            --name codecov-moneymaker \
-            --git-service github \
-            -t ${{ secrets.CODECOV_TOKEN }} \
-            --fail-on-error
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unit
+          name: codecov-moneymaker
+          fail_ci_if_error: true
+          verbose: true
       
       - name: Coverage comment on PR
         if: github.event_name == 'pull_request'
