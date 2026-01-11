@@ -112,6 +112,38 @@ async def get_tradeable_markets(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/markets/summary", tags=["Markets"])
+async def get_markets_summary() -> dict[str, Any]:
+    """
+    Get summary statistics about available markets.
+    """
+    service = get_service()
+
+    try:
+        # Fetch a batch of markets
+        markets, summary = await service.get_filtered_markets(limit=100)
+
+        # Calculate additional stats
+        if markets:
+            avg_volume = sum(m.volume for m in markets) / len(markets)
+            avg_liquidity = sum(m.liquidity for m in markets) / len(markets)
+            categories = list({m.category for m in markets if m.category})
+        else:
+            avg_volume = 0
+            avg_liquidity = 0
+            categories = []
+
+        return {
+            **summary,
+            "average_volume": avg_volume,
+            "average_liquidity": avg_liquidity,
+            "categories": categories,
+        }
+    except Exception as e:
+        logger.error("get_summary_error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/markets/{market_id}", response_model=Market, tags=["Markets"])
 async def get_market(market_id: str) -> Market:
     """
@@ -173,38 +205,6 @@ async def filter_markets(
         }
     except Exception as e:
         logger.error("filter_markets_error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/markets/summary", tags=["Markets"])
-async def get_markets_summary() -> dict[str, Any]:
-    """
-    Get summary statistics about available markets.
-    """
-    service = get_service()
-
-    try:
-        # Fetch a batch of markets
-        markets, summary = await service.get_filtered_markets(limit=100)
-
-        # Calculate additional stats
-        if markets:
-            avg_volume = sum(m.volume for m in markets) / len(markets)
-            avg_liquidity = sum(m.liquidity for m in markets) / len(markets)
-            categories = list({m.category for m in markets if m.category})
-        else:
-            avg_volume = 0
-            avg_liquidity = 0
-            categories = []
-
-        return {
-            **summary,
-            "average_volume": avg_volume,
-            "average_liquidity": avg_liquidity,
-            "categories": categories,
-        }
-    except Exception as e:
-        logger.error("get_summary_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
