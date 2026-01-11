@@ -138,6 +138,7 @@ Outcomes: {outcomes_str}
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True,
     )
     async def analyze_markets(
         self,
@@ -247,7 +248,7 @@ Markets to Analyze:
                             reason="missing market_id or recommended_outcome",
                         )
                         continue
-                    
+
                     suggestion = AISuggestion(
                         market_id=market_id,
                         market_question=item.get("market_question", ""),

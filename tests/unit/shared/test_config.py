@@ -150,7 +150,7 @@ class TestSettings:
         for key in ["ENVIRONMENT", "GCP_PROJECT_ID"]:
             if key in os.environ:
                 env_backup[key] = os.environ.pop(key)
-        
+
         try:
             reset_settings()
             settings = Settings()
