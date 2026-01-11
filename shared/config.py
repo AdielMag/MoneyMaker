@@ -18,7 +18,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class WorkflowConfig(BaseSettings):
     """Configuration for a trading workflow."""
-    
+
     enabled: bool = False
     scheduler_cron: str = "0 */2 * * *"
     initial_balance: float = 1000.0
@@ -26,14 +26,14 @@ class WorkflowConfig(BaseSettings):
 
 class SellThresholds(BaseSettings):
     """Sell threshold configuration."""
-    
+
     stop_loss_percent: float = -15.0
     take_profit_percent: float = 30.0
 
 
 class TradingConfig(BaseSettings):
     """Trading configuration."""
-    
+
     min_balance_to_trade: float = 10.0
     max_bet_amount: float = 50.0
     max_positions: int = 10
@@ -42,7 +42,7 @@ class TradingConfig(BaseSettings):
 
 class MarketFiltersConfig(BaseSettings):
     """Market filtering configuration."""
-    
+
     min_volume: int = 1000
     max_time_to_resolution_hours: float = 1.0
     min_liquidity: int = 500
@@ -53,7 +53,7 @@ class MarketFiltersConfig(BaseSettings):
 
 class AIConfig(BaseSettings):
     """AI configuration."""
-    
+
     model: str = "gemini-1.5-pro"
     max_suggestions: int = 5
     confidence_threshold: float = 0.7
@@ -63,7 +63,7 @@ class AIConfig(BaseSettings):
 
 class APIConfig(BaseSettings):
     """API server configuration."""
-    
+
     host: str = "0.0.0.0"
     port: int = 8000
     debug: bool = False
@@ -72,7 +72,7 @@ class APIConfig(BaseSettings):
 
 class LoggingConfig(BaseSettings):
     """Logging configuration."""
-    
+
     level: str = "INFO"
     format: str = "json"
     include_timestamp: bool = True
@@ -81,49 +81,51 @@ class LoggingConfig(BaseSettings):
 class Settings(BaseSettings):
     """
     Main settings class for MoneyMaker.
-    
+
     Settings are loaded from:
     1. Default values
     2. config/config.yaml
     3. Environment variables (highest priority)
     """
-    
+
     model_config = SettingsConfigDict(
         env_prefix="",
         env_nested_delimiter="__",
         case_sensitive=False,
         extra="ignore",
     )
-    
+
     # Environment
     environment: str = Field(default="development")
-    
+
     # GCP
     gcp_project_id: str = Field(default="")
     gcp_region: str = Field(default="us-central1")
-    
+
     # Polymarket
     polymarket_api_key: str = Field(default="")
     polymarket_api_secret: str = Field(default="")
     polymarket_wallet_address: str = Field(default="")
     polymarket_private_key: str = Field(default="")
-    
+
     # Gemini
     gemini_api_key: str = Field(default="")
-    
+
     # Feature Flags
     real_money_enabled: bool = Field(default=False)
     fake_money_enabled: bool = Field(default=True)
-    
+
     # Nested configs
     workflows_real_money: WorkflowConfig = Field(default_factory=WorkflowConfig)
-    workflows_fake_money: WorkflowConfig = Field(default_factory=lambda: WorkflowConfig(enabled=True))
+    workflows_fake_money: WorkflowConfig = Field(
+        default_factory=lambda: WorkflowConfig(enabled=True)
+    )
     trading: TradingConfig = Field(default_factory=TradingConfig)
     market_filters: MarketFiltersConfig = Field(default_factory=MarketFiltersConfig)
     ai: AIConfig = Field(default_factory=AIConfig)
     api: APIConfig = Field(default_factory=APIConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
-    
+
     @field_validator("environment")
     @classmethod
     def validate_environment(cls, v: str) -> str:
@@ -132,17 +134,17 @@ class Settings(BaseSettings):
         if v.lower() not in allowed:
             raise ValueError(f"environment must be one of {allowed}")
         return v.lower()
-    
+
     @property
     def is_production(self) -> bool:
         """Check if running in production."""
         return self.environment == "production"
-    
+
     @property
     def is_test(self) -> bool:
         """Check if running in test mode."""
         return self.environment == "test"
-    
+
     def get_active_mode(self) -> str:
         """Get the currently active trading mode."""
         if self.real_money_enabled:
@@ -155,10 +157,10 @@ class Settings(BaseSettings):
 def load_yaml_config(config_path: Path | None = None) -> dict[str, Any]:
     """
     Load configuration from YAML file.
-    
+
     Args:
         config_path: Path to config file. Defaults to config/config.yaml
-        
+
     Returns:
         Dictionary with configuration values
     """
@@ -173,10 +175,10 @@ def load_yaml_config(config_path: Path | None = None) -> dict[str, Any]:
             if path.exists():
                 config_path = path
                 break
-    
+
     if config_path is None or not config_path.exists():
         return {}
-    
+
     with open(config_path) as f:
         return yaml.safe_load(f) or {}
 
@@ -184,12 +186,12 @@ def load_yaml_config(config_path: Path | None = None) -> dict[str, Any]:
 def flatten_dict(d: dict[str, Any], parent_key: str = "", sep: str = "__") -> dict[str, Any]:
     """
     Flatten a nested dictionary for environment variable style keys.
-    
+
     Args:
         d: Dictionary to flatten
         parent_key: Parent key prefix
         sep: Separator between keys
-        
+
     Returns:
         Flattened dictionary
     """
@@ -207,22 +209,22 @@ def flatten_dict(d: dict[str, Any], parent_key: str = "", sep: str = "__") -> di
 def get_settings() -> Settings:
     """
     Get cached settings instance.
-    
+
     Settings are loaded once and cached for performance.
     Call this function to access settings throughout the application.
-    
+
     Returns:
         Settings instance
     """
     # Load YAML config first
     yaml_config = load_yaml_config()
-    
+
     # Flatten nested config for pydantic-settings
     flat_config = flatten_dict(yaml_config)
-    
+
     # Convert to uppercase for env var style
     env_style_config = {k.upper(): v for k, v in flat_config.items()}
-    
+
     # Set as environment variables (only if not already set)
     for key, value in env_style_config.items():
         if key not in os.environ and value is not None:
@@ -232,7 +234,7 @@ def get_settings() -> Settings:
                 os.environ[key] = str(value).lower()
             else:
                 os.environ[key] = str(value)
-    
+
     return Settings()
 
 

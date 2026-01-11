@@ -9,13 +9,11 @@ Provides async interface to Google Cloud Firestore for:
 """
 
 from datetime import datetime
-from typing import Any
 from uuid import uuid4
 
 import structlog
 from google.cloud import firestore
 from google.cloud.firestore_v1 import AsyncClient
-from google.cloud.firestore_v1.async_document import AsyncDocumentReference
 
 from shared.config import Settings, get_settings
 from shared.models import (
@@ -32,71 +30,72 @@ logger = structlog.get_logger(__name__)
 
 class FirestoreError(Exception):
     """Custom exception for Firestore errors."""
+
     pass
 
 
 class FirestoreClient:
     """
     Async client for Google Cloud Firestore.
-    
+
     Manages all persistent storage for fake trading mode including:
     - Wallets and balances
     - Open positions
     - Transaction history
     - Workflow state
     """
-    
+
     # Collection names
     WALLETS_COLLECTION = "fake_wallets"
     POSITIONS_COLLECTION = "fake_positions"
     TRANSACTIONS_COLLECTION = "fake_transactions"
     WORKFLOW_STATE_COLLECTION = "workflow_state"
     MARKET_CACHE_COLLECTION = "market_cache"
-    
+
     def __init__(self, settings: Settings | None = None):
         """
         Initialize Firestore client.
-        
+
         Args:
             settings: Settings instance. If None, loads from environment.
         """
         self.settings = settings or get_settings()
         self._db: AsyncClient | None = None
-    
+
     @property
     def db(self) -> AsyncClient:
         """Get Firestore client, creating if needed."""
         if self._db is None:
             self._db = firestore.AsyncClient(project=self.settings.gcp_project_id)
         return self._db
-    
+
     async def close(self) -> None:
         """Close the Firestore client."""
         if self._db:
             self._db.close()
             self._db = None
-    
+
     # =========================================================================
     # Wallet Operations
     # =========================================================================
-    
+
     async def get_wallet(self, wallet_id: str = "default") -> Wallet | None:
         """
         Get a wallet by ID.
-        
+
         Args:
             wallet_id: Wallet identifier
-            
+
         Returns:
             Wallet object or None if not found
         """
         try:
             doc_ref = self.db.collection(self.WALLETS_COLLECTION).document(wallet_id)
             doc = await doc_ref.get()
-            
+
             if not doc.exists:
                 return None
-            
+
             data = doc.to_dict()
             return Wallet(
                 wallet_id=wallet_id,
@@ -108,7 +107,7 @@ class FirestoreClient:
         except Exception as e:
             logger.error("get_wallet_error", wallet_id=wallet_id, error=str(e))
             raise FirestoreError(f"Failed to get wallet: {str(e)}")
-    
+
     async def create_wallet(
         self,
         wallet_id: str = "default",
@@ -116,22 +115,22 @@ class FirestoreClient:
     ) -> Wallet:
         """
         Create a new wallet.
-        
+
         Args:
             wallet_id: Wallet identifier
             initial_balance: Starting balance. Uses config default if None.
-            
+
         Returns:
             Created Wallet object
         """
         if initial_balance is None:
             initial_balance = self.settings.workflows_fake_money.initial_balance
-        
+
         wallet = Wallet(
             wallet_id=wallet_id,
             balance=initial_balance,
         )
-        
+
         try:
             doc_ref = self.db.collection(self.WALLETS_COLLECTION).document(wallet_id)
             await doc_ref.set(wallet.model_dump())
@@ -140,7 +139,7 @@ class FirestoreClient:
         except Exception as e:
             logger.error("create_wallet_error", wallet_id=wallet_id, error=str(e))
             raise FirestoreError(f"Failed to create wallet: {str(e)}")
-    
+
     async def get_or_create_wallet(
         self,
         wallet_id: str = "default",
@@ -148,11 +147,11 @@ class FirestoreClient:
     ) -> Wallet:
         """
         Get existing wallet or create new one.
-        
+
         Args:
             wallet_id: Wallet identifier
             initial_balance: Starting balance for new wallet
-            
+
         Returns:
             Wallet object
         """
@@ -160,7 +159,7 @@ class FirestoreClient:
         if wallet is None:
             wallet = await self.create_wallet(wallet_id, initial_balance)
         return wallet
-    
+
     async def update_wallet_balance(
         self,
         wallet_id: str,
@@ -168,48 +167,50 @@ class FirestoreClient:
     ) -> Wallet:
         """
         Update wallet balance.
-        
+
         Args:
             wallet_id: Wallet identifier
             new_balance: New balance value
-            
+
         Returns:
             Updated Wallet object
         """
         try:
             doc_ref = self.db.collection(self.WALLETS_COLLECTION).document(wallet_id)
-            await doc_ref.update({
-                "balance": new_balance,
-                "updated_at": datetime.utcnow(),
-            })
-            
+            await doc_ref.update(
+                {
+                    "balance": new_balance,
+                    "updated_at": datetime.utcnow(),
+                }
+            )
+
             wallet = await self.get_wallet(wallet_id)
             if wallet is None:
                 raise FirestoreError(f"Wallet {wallet_id} not found after update")
-            
+
             logger.info("wallet_balance_updated", wallet_id=wallet_id, new_balance=new_balance)
             return wallet
         except Exception as e:
             logger.error("update_wallet_error", wallet_id=wallet_id, error=str(e))
             raise FirestoreError(f"Failed to update wallet: {str(e)}")
-    
+
     # =========================================================================
     # Position Operations
     # =========================================================================
-    
+
     async def create_position(self, position: Position) -> Position:
         """
         Create a new position.
-        
+
         Args:
             position: Position to create
-            
+
         Returns:
             Created Position with ID
         """
         if not position.id:
             position.id = str(uuid4())
-        
+
         try:
             doc_ref = self.db.collection(self.POSITIONS_COLLECTION).document(position.id)
             await doc_ref.set(position.model_dump(mode="json"))
@@ -223,45 +224,42 @@ class FirestoreClient:
         except Exception as e:
             logger.error("create_position_error", error=str(e))
             raise FirestoreError(f"Failed to create position: {str(e)}")
-    
+
     async def get_position(self, position_id: str) -> Position | None:
         """
         Get a position by ID.
-        
+
         Args:
             position_id: Position identifier
-            
+
         Returns:
             Position object or None if not found
         """
         try:
             doc_ref = self.db.collection(self.POSITIONS_COLLECTION).document(position_id)
             doc = await doc_ref.get()
-            
+
             if not doc.exists:
                 return None
-            
+
             return Position(**doc.to_dict())
         except Exception as e:
             logger.error("get_position_error", position_id=position_id, error=str(e))
             raise FirestoreError(f"Failed to get position: {str(e)}")
-    
+
     async def get_open_positions(self, mode: TradingMode = TradingMode.FAKE) -> list[Position]:
         """
         Get all open positions for a trading mode.
-        
+
         Args:
             mode: Trading mode (real or fake)
-            
+
         Returns:
             List of Position objects
         """
         try:
-            query = (
-                self.db.collection(self.POSITIONS_COLLECTION)
-                .where("mode", "==", mode.value)
-            )
-            
+            query = self.db.collection(self.POSITIONS_COLLECTION).where("mode", "==", mode.value)
+
             positions = []
             async for doc in query.stream():
                 try:
@@ -269,19 +267,19 @@ class FirestoreClient:
                 except Exception as e:
                     logger.warning("parse_position_error", doc_id=doc.id, error=str(e))
                     continue
-            
+
             return positions
         except Exception as e:
             logger.error("get_open_positions_error", mode=mode.value, error=str(e))
             raise FirestoreError(f"Failed to get positions: {str(e)}")
-    
+
     async def update_position(self, position: Position) -> Position:
         """
         Update an existing position.
-        
+
         Args:
             position: Position with updated values
-            
+
         Returns:
             Updated Position
         """
@@ -293,14 +291,14 @@ class FirestoreClient:
         except Exception as e:
             logger.error("update_position_error", position_id=position.id, error=str(e))
             raise FirestoreError(f"Failed to update position: {str(e)}")
-    
+
     async def delete_position(self, position_id: str) -> bool:
         """
         Delete a position (when closed).
-        
+
         Args:
             position_id: Position identifier
-            
+
         Returns:
             True if deleted successfully
         """
@@ -312,11 +310,11 @@ class FirestoreClient:
         except Exception as e:
             logger.error("delete_position_error", position_id=position_id, error=str(e))
             return False
-    
+
     # =========================================================================
     # Transaction Operations
     # =========================================================================
-    
+
     async def create_transaction(
         self,
         wallet_id: str,
@@ -329,7 +327,7 @@ class FirestoreClient:
     ) -> Transaction:
         """
         Create a transaction record.
-        
+
         Args:
             wallet_id: Wallet identifier
             tx_type: Transaction type
@@ -338,7 +336,7 @@ class FirestoreClient:
             balance_after: Balance after transaction
             reference_id: Related order/position ID
             description: Transaction description
-            
+
         Returns:
             Created Transaction
         """
@@ -352,7 +350,7 @@ class FirestoreClient:
             reference_id=reference_id,
             description=description,
         )
-        
+
         try:
             doc_ref = self.db.collection(self.TRANSACTIONS_COLLECTION).document(tx.id)
             await doc_ref.set(tx.model_dump(mode="json"))
@@ -366,7 +364,7 @@ class FirestoreClient:
         except Exception as e:
             logger.error("create_transaction_error", error=str(e))
             raise FirestoreError(f"Failed to create transaction: {str(e)}")
-    
+
     async def get_transactions(
         self,
         wallet_id: str,
@@ -374,11 +372,11 @@ class FirestoreClient:
     ) -> list[Transaction]:
         """
         Get transactions for a wallet.
-        
+
         Args:
             wallet_id: Wallet identifier
             limit: Maximum number of transactions
-            
+
         Returns:
             List of Transaction objects (newest first)
         """
@@ -389,7 +387,7 @@ class FirestoreClient:
                 .order_by("created_at", direction=firestore.Query.DESCENDING)
                 .limit(limit)
             )
-            
+
             transactions = []
             async for doc in query.stream():
                 try:
@@ -397,16 +395,16 @@ class FirestoreClient:
                 except Exception as e:
                     logger.warning("parse_transaction_error", doc_id=doc.id, error=str(e))
                     continue
-            
+
             return transactions
         except Exception as e:
             logger.error("get_transactions_error", wallet_id=wallet_id, error=str(e))
             raise FirestoreError(f"Failed to get transactions: {str(e)}")
-    
+
     # =========================================================================
     # Workflow State Operations
     # =========================================================================
-    
+
     async def get_workflow_state(
         self,
         workflow_id: str,
@@ -414,41 +412,41 @@ class FirestoreClient:
     ) -> WorkflowState | None:
         """
         Get workflow state.
-        
+
         Args:
             workflow_id: Workflow identifier
             mode: Trading mode
-            
+
         Returns:
             WorkflowState or None if not found
         """
         doc_id = f"{workflow_id}_{mode.value}"
-        
+
         try:
             doc_ref = self.db.collection(self.WORKFLOW_STATE_COLLECTION).document(doc_id)
             doc = await doc_ref.get()
-            
+
             if not doc.exists:
                 return None
-            
+
             return WorkflowState(**doc.to_dict())
         except Exception as e:
             logger.error("get_workflow_state_error", workflow_id=workflow_id, error=str(e))
             raise FirestoreError(f"Failed to get workflow state: {str(e)}")
-    
+
     async def update_workflow_state(self, state: WorkflowState) -> WorkflowState:
         """
         Update workflow state.
-        
+
         Args:
             state: WorkflowState to save
-            
+
         Returns:
             Updated WorkflowState
         """
         doc_id = f"{state.workflow_id}_{state.mode.value}"
         state.updated_at = datetime.utcnow()
-        
+
         try:
             doc_ref = self.db.collection(self.WORKFLOW_STATE_COLLECTION).document(doc_id)
             await doc_ref.set(state.model_dump(mode="json"))
@@ -462,7 +460,7 @@ class FirestoreClient:
         except Exception as e:
             logger.error("update_workflow_state_error", error=str(e))
             raise FirestoreError(f"Failed to update workflow state: {str(e)}")
-    
+
     async def toggle_workflow(
         self,
         workflow_id: str,
@@ -471,17 +469,17 @@ class FirestoreClient:
     ) -> WorkflowState:
         """
         Toggle a workflow's enabled state.
-        
+
         Args:
             workflow_id: Workflow identifier
             mode: Trading mode
             enabled: New enabled state
-            
+
         Returns:
             Updated WorkflowState
         """
         state = await self.get_workflow_state(workflow_id, mode)
-        
+
         if state is None:
             state = WorkflowState(
                 workflow_id=workflow_id,
@@ -490,7 +488,7 @@ class FirestoreClient:
             )
         else:
             state.enabled = enabled
-        
+
         return await self.update_workflow_state(state)
 
 

@@ -11,16 +11,15 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from services.trader.service import TraderService, get_trader_service
 from shared.config import get_settings
 from shared.models import (
     BalanceResponse,
     HealthResponse,
     Order,
-    OrderResponse,
     Position,
     TradingMode,
 )
-from services.trader.service import TraderService, get_trader_service
 
 logger = structlog.get_logger(__name__)
 
@@ -60,7 +59,7 @@ def get_service() -> TraderService:
 
 class BuyOrderRequest(BaseModel):
     """Request model for placing a buy order."""
-    
+
     market_id: str = Field(..., description="Market condition ID")
     outcome: str = Field(..., description="Outcome to buy (Yes/No)")
     amount: float = Field(..., gt=0, description="Amount to spend in USDC")
@@ -70,14 +69,14 @@ class BuyOrderRequest(BaseModel):
 
 class SellOrderRequest(BaseModel):
     """Request model for placing a sell order."""
-    
+
     position: dict[str, Any] = Field(..., description="Position to close")
     price: float | None = Field(default=None, description="Limit price (optional)")
 
 
 class ExecuteSuggestionRequest(BaseModel):
     """Request model for executing AI suggestion."""
-    
+
     suggestion: dict[str, Any] = Field(..., description="AI suggestion")
     position_size: float = Field(..., gt=0, description="Amount to trade")
     mode: TradingMode = Field(default=TradingMode.FAKE, description="Trading mode")
@@ -105,11 +104,11 @@ async def get_balance(mode: TradingMode) -> BalanceResponse:
     Get current balance for trading mode.
     """
     service = get_service()
-    
+
     try:
         balance = await service.get_balance(mode)
         min_balance = settings.trading.min_balance_to_trade
-        
+
         return BalanceResponse(
             mode=mode,
             balance=balance,
@@ -129,7 +128,7 @@ async def can_trade(
     Check if trading is possible for given amount.
     """
     service = get_service()
-    
+
     try:
         can_trade, reason = await service.can_trade(mode, amount)
         return {
@@ -154,13 +153,13 @@ async def place_buy_order(request: BuyOrderRequest) -> Order:
     Place a buy order.
     """
     service = get_service()
-    
+
     try:
         # Check if we can trade
         can_trade, reason = await service.can_trade(request.mode, request.amount)
         if not can_trade:
             raise HTTPException(status_code=400, detail=reason)
-        
+
         order = await service.place_buy_order(
             market_id=request.market_id,
             outcome=request.outcome,
@@ -168,9 +167,9 @@ async def place_buy_order(request: BuyOrderRequest) -> Order:
             price=request.price,
             mode=request.mode,
         )
-        
+
         return order
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -184,12 +183,12 @@ async def place_sell_order(request: SellOrderRequest) -> Order:
     Place a sell order to close a position.
     """
     service = get_service()
-    
+
     try:
         position = Position(**request.position)
         order = await service.place_sell_order(position, request.price)
         return order
-        
+
     except Exception as e:
         logger.error("sell_order_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -201,25 +200,25 @@ async def execute_suggestion(request: ExecuteSuggestionRequest) -> Order:
     Execute a trade based on AI suggestion.
     """
     service = get_service()
-    
+
     try:
         from shared.models import AISuggestion
-        
+
         suggestion = AISuggestion(**request.suggestion)
-        
+
         # Check if we can trade
         can_trade, reason = await service.can_trade(request.mode, request.position_size)
         if not can_trade:
             raise HTTPException(status_code=400, detail=reason)
-        
+
         order = await service.execute_suggestion(
             suggestion=suggestion,
             position_size=request.position_size,
             mode=request.mode,
         )
-        
+
         return order
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -253,7 +252,7 @@ async def get_trading_config() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host=settings.api.host,

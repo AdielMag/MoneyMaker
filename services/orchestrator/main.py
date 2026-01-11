@@ -12,15 +12,14 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from services.orchestrator.service import OrchestratorService, get_orchestrator_service
 from shared.config import get_settings
 from shared.models import (
     BalanceResponse,
     HealthResponse,
     TradingMode,
     WorkflowRunResult,
-    WorkflowState,
 )
-from services.orchestrator.service import OrchestratorService, get_orchestrator_service
 
 logger = structlog.get_logger(__name__)
 
@@ -62,13 +61,13 @@ def get_service() -> OrchestratorService:
 
 class WorkflowTriggerRequest(BaseModel):
     """Request model for triggering a workflow."""
-    
+
     mode: TradingMode = Field(default=TradingMode.FAKE, description="Trading mode")
 
 
 class ToggleWorkflowRequest(BaseModel):
     """Request model for toggling a workflow."""
-    
+
     workflow_id: str = Field(..., description="Workflow ID (discovery or monitor)")
     mode: TradingMode = Field(..., description="Trading mode")
     enabled: bool = Field(..., description="New enabled state")
@@ -95,11 +94,11 @@ async def readiness_check() -> dict[str, str]:
 async def system_status() -> dict[str, Any]:
     """
     Get overall system status.
-    
+
     Returns system configuration, balances, and position summary.
     """
     service = get_service()
-    
+
     try:
         return await service.get_system_status()
     except Exception as e:
@@ -116,14 +115,14 @@ async def system_status() -> dict[str, Any]:
 async def trigger_discovery(request: WorkflowTriggerRequest) -> WorkflowRunResult:
     """
     Trigger the market discovery and betting workflow.
-    
+
     1. Checks available balance
     2. Scrapes and filters markets
     3. Analyzes with AI
     4. Places buy orders for top suggestions
     """
     service = get_service()
-    
+
     try:
         result = await service.run_discovery(request.mode)
         return result
@@ -136,14 +135,14 @@ async def trigger_discovery(request: WorkflowTriggerRequest) -> WorkflowRunResul
 async def trigger_monitor(request: WorkflowTriggerRequest) -> WorkflowRunResult:
     """
     Trigger the position monitoring workflow.
-    
+
     1. Gets open positions
     2. Updates current prices
     3. Checks against stop-loss/take-profit thresholds
     4. Executes sell orders as needed
     """
     service = get_service()
-    
+
     try:
         result = await service.run_monitor(request.mode)
         return result
@@ -158,7 +157,7 @@ async def toggle_workflow(request: ToggleWorkflowRequest) -> dict[str, Any]:
     Enable or disable a workflow.
     """
     service = get_service()
-    
+
     try:
         state = await service.toggle_workflow(
             workflow_id=request.workflow_id,
@@ -185,7 +184,7 @@ async def get_workflow_state(
     Get current state of a workflow.
     """
     service = get_service()
-    
+
     try:
         state = await service.get_workflow_state(workflow_id, mode)
         if state is None:
@@ -210,7 +209,7 @@ async def get_markets(
     Get available markets.
     """
     service = get_service()
-    
+
     try:
         return await service.get_markets(limit=limit, filtered=filtered)
     except Exception as e:
@@ -229,7 +228,7 @@ async def get_positions(mode: TradingMode) -> list[dict[str, Any]]:
     Get open positions for a trading mode.
     """
     service = get_service()
-    
+
     try:
         return await service.get_positions(mode)
     except Exception as e:
@@ -248,7 +247,7 @@ async def get_balance(mode: TradingMode) -> BalanceResponse:
     Get current balance for trading mode.
     """
     service = get_service()
-    
+
     try:
         balance = await service.get_balance(mode)
         return BalanceResponse(
@@ -304,7 +303,7 @@ async def get_config() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host=settings.api.host,

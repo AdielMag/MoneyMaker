@@ -2,13 +2,12 @@
 Unit tests for position monitor service.
 """
 
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from shared.models import Order, OrderStatus, Position, TradingMode
 from services.monitor.service import MonitorService, get_monitor_service
+from shared.models import Order, OrderStatus, Position, TradingMode
 
 
 @pytest.fixture
@@ -27,17 +26,19 @@ def mock_settings():
 def mock_trader():
     """Create mock trader service."""
     trader = MagicMock()
-    trader.place_sell_order = AsyncMock(return_value=Order(
-        id="order-001",
-        market_id="market-001",
-        outcome="Yes",
-        side="sell",
-        price=0.40,
-        quantity=100,
-        total_value=40.0,
-        status=OrderStatus.FILLED,
-        mode=TradingMode.FAKE,
-    ))
+    trader.place_sell_order = AsyncMock(
+        return_value=Order(
+            id="order-001",
+            market_id="market-001",
+            outcome="Yes",
+            side="sell",
+            price=0.40,
+            quantity=100,
+            total_value=40.0,
+            status=OrderStatus.FILLED,
+            mode=TradingMode.FAKE,
+        )
+    )
     return trader
 
 
@@ -102,35 +103,33 @@ def neutral_position():
 
 class TestMonitorService:
     """Tests for MonitorService."""
-    
+
     def test_stop_loss_threshold(self, mock_settings):
         """Test stop-loss threshold property."""
         service = MonitorService(settings=mock_settings)
-        
+
         assert service.stop_loss_threshold == -15.0
-    
+
     def test_take_profit_threshold(self, mock_settings):
         """Test take-profit threshold property."""
         service = MonitorService(settings=mock_settings)
-        
+
         assert service.take_profit_threshold == 30.0
-    
+
     @pytest.mark.asyncio
-    async def test_check_position_stop_loss(
-        self, mock_settings, mock_trader, losing_position
-    ):
+    async def test_check_position_stop_loss(self, mock_settings, mock_trader, losing_position):
         """Test stop-loss trigger."""
         service = MonitorService(
             trader_service=mock_trader,
             settings=mock_settings,
         )
-        
+
         should_sell, action, reason = await service.check_position(losing_position)
-        
+
         assert should_sell is True
         assert action == "stop_loss"
         assert "-20.0%" in reason or "-15%" in reason
-    
+
     @pytest.mark.asyncio
     async def test_check_position_take_profit(
         self, mock_settings, mock_trader, profitable_position
@@ -140,28 +139,26 @@ class TestMonitorService:
             trader_service=mock_trader,
             settings=mock_settings,
         )
-        
+
         should_sell, action, reason = await service.check_position(profitable_position)
-        
+
         assert should_sell is True
         assert action == "take_profit"
         assert "40.0%" in reason or "30%" in reason
-    
+
     @pytest.mark.asyncio
-    async def test_check_position_hold(
-        self, mock_settings, mock_trader, neutral_position
-    ):
+    async def test_check_position_hold(self, mock_settings, mock_trader, neutral_position):
         """Test position that should be held."""
         service = MonitorService(
             trader_service=mock_trader,
             settings=mock_settings,
         )
-        
+
         should_sell, action, reason = await service.check_position(neutral_position)
-        
+
         assert should_sell is False
         assert action == "hold"
-    
+
     @pytest.mark.asyncio
     async def test_check_position_exact_stop_loss(self, mock_settings, mock_trader):
         """Test position at exactly stop-loss threshold."""
@@ -177,17 +174,17 @@ class TestMonitorService:
             pnl_percent=-15.0,  # Exactly at threshold
             mode=TradingMode.FAKE,
         )
-        
+
         service = MonitorService(
             trader_service=mock_trader,
             settings=mock_settings,
         )
-        
+
         should_sell, action, _ = await service.check_position(position)
-        
+
         assert should_sell is True
         assert action == "stop_loss"
-    
+
     @pytest.mark.asyncio
     async def test_check_position_exact_take_profit(self, mock_settings, mock_trader):
         """Test position at exactly take-profit threshold."""
@@ -203,17 +200,17 @@ class TestMonitorService:
             pnl_percent=30.0,  # Exactly at threshold
             mode=TradingMode.FAKE,
         )
-        
+
         service = MonitorService(
             trader_service=mock_trader,
             settings=mock_settings,
         )
-        
+
         should_sell, action, _ = await service.check_position(position)
-        
+
         assert should_sell is True
         assert action == "take_profit"
-    
+
     @pytest.mark.asyncio
     async def test_check_position_just_above_stop_loss(self, mock_settings, mock_trader):
         """Test position just above stop-loss (should not trigger)."""
@@ -229,17 +226,17 @@ class TestMonitorService:
             pnl_percent=-14.4,  # Just above -15%
             mode=TradingMode.FAKE,
         )
-        
+
         service = MonitorService(
             trader_service=mock_trader,
             settings=mock_settings,
         )
-        
+
         should_sell, action, _ = await service.check_position(position)
-        
+
         assert should_sell is False
         assert action == "hold"
-    
+
     @pytest.mark.asyncio
     async def test_monitor_positions_empty(self, mock_settings, mock_trader, mock_firestore):
         """Test monitoring with no positions."""
@@ -248,51 +245,51 @@ class TestMonitorService:
             firestore_client=mock_firestore,
             settings=mock_settings,
         )
-        
+
         results = await service.monitor_positions(TradingMode.FAKE)
-        
+
         assert results["positions_checked"] == 0
         assert results["sells_triggered"] == 0
-    
+
     @pytest.mark.asyncio
     async def test_monitor_positions_triggers_sell(
         self, mock_settings, mock_trader, mock_firestore, losing_position
     ):
         """Test monitoring triggers sell for losing position."""
         mock_firestore.get_open_positions = AsyncMock(return_value=[losing_position])
-        
+
         service = MonitorService(
             trader_service=mock_trader,
             firestore_client=mock_firestore,
             settings=mock_settings,
         )
-        
+
         results = await service.monitor_positions(TradingMode.FAKE)
-        
+
         assert results["positions_checked"] == 1
         assert results["sells_triggered"] == 1
         assert results["stop_losses"] == 1
         mock_trader.place_sell_order.assert_called_once()
-    
+
     @pytest.mark.asyncio
     async def test_get_positions_summary(
         self, mock_settings, mock_trader, mock_firestore, neutral_position
     ):
         """Test getting positions summary."""
         mock_firestore.get_open_positions = AsyncMock(return_value=[neutral_position])
-        
+
         service = MonitorService(
             trader_service=mock_trader,
             firestore_client=mock_firestore,
             settings=mock_settings,
         )
-        
+
         summary = await service.get_positions_summary(TradingMode.FAKE)
-        
+
         assert summary["count"] == 1
         assert summary["profitable"] == 1
         assert summary["losing"] == 0
-    
+
     def test_should_trigger_alert_near_stop_loss(self, mock_settings):
         """Test alert trigger near stop-loss."""
         position = Position(
@@ -307,22 +304,22 @@ class TestMonitorService:
             pnl_percent=-12.0,  # Within 5% of -15%
             mode=TradingMode.FAKE,
         )
-        
+
         service = MonitorService(settings=mock_settings)
         should_alert, reason = service.should_trigger_alert(position)
-        
+
         assert should_alert is True
         assert "stop-loss" in reason
 
 
 class TestGetMonitorService:
     """Tests for factory function."""
-    
+
     def test_get_monitor_service(self):
         """Test factory creates service."""
-        with patch('services.monitor.service.get_settings') as mock_get_settings:
+        with patch("services.monitor.service.get_settings") as mock_get_settings:
             mock_get_settings.return_value = MagicMock()
-            
+
             service = get_monitor_service()
-            
+
             assert isinstance(service, MonitorService)

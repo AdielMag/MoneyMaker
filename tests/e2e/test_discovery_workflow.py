@@ -3,22 +3,19 @@ End-to-end tests for the discovery workflow.
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from services.orchestrator.workflows import DiscoveryWorkflow
 from shared.models import (
     AIAnalysisResult,
     AISuggestion,
     Market,
     MarketOutcome,
-    Order,
-    OrderStatus,
     TradingMode,
     Wallet,
 )
-from services.orchestrator.service import OrchestratorService
-from services.orchestrator.workflows import DiscoveryWorkflow
 
 
 @pytest.fixture
@@ -121,7 +118,7 @@ def mock_ai_suggestions():
 @pytest.mark.e2e
 class TestDiscoveryWorkflowE2E:
     """End-to-end tests for discovery workflow."""
-    
+
     @pytest.mark.asyncio
     async def test_complete_discovery_flow_fake_money(
         self, e2e_settings, mock_markets, mock_ai_suggestions
@@ -132,10 +129,10 @@ class TestDiscoveryWorkflowE2E:
         mock_polymarket.get_markets = AsyncMock(return_value=mock_markets)
         mock_polymarket.__aenter__ = AsyncMock(return_value=mock_polymarket)
         mock_polymarket.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_gemini = MagicMock()
         mock_gemini.analyze_markets = AsyncMock(return_value=mock_ai_suggestions)
-        
+
         mock_wallet = Wallet(wallet_id="test", balance=1000.0)
         mock_firestore = MagicMock()
         mock_firestore.get_or_create_wallet = AsyncMock(return_value=mock_wallet)
@@ -145,27 +142,27 @@ class TestDiscoveryWorkflowE2E:
         mock_firestore.create_position = AsyncMock()
         mock_firestore.get_workflow_state = AsyncMock(return_value=None)
         mock_firestore.update_workflow_state = AsyncMock()
-        
+
         # Create services with mocks
-        from services.scraper.service import ScraperService
         from services.ai_suggester.service import AISuggesterService
+        from services.scraper.service import ScraperService
         from services.trader.service import TraderService
-        
+
         scraper = ScraperService(
             polymarket_client=mock_polymarket,
             settings=e2e_settings,
         )
-        
+
         ai_suggester = AISuggesterService(
             gemini_client=mock_gemini,
             settings=e2e_settings,
         )
-        
+
         trader = TraderService(
             firestore_client=mock_firestore,
             settings=e2e_settings,
         )
-        
+
         # Create workflow
         workflow = DiscoveryWorkflow(
             scraper_service=scraper,
@@ -173,10 +170,10 @@ class TestDiscoveryWorkflowE2E:
             trader_service=trader,
             settings=e2e_settings,
         )
-        
+
         # Run workflow
         result = await workflow.run(TradingMode.FAKE)
-        
+
         # Verify results
         assert result.workflow_id == "discovery"
         assert result.mode == TradingMode.FAKE
@@ -184,7 +181,7 @@ class TestDiscoveryWorkflowE2E:
         assert result.suggestions_generated > 0
         # Orders may or may not be placed depending on should_trade logic
         assert len(result.errors) == 0 or result.success
-    
+
     @pytest.mark.asyncio
     async def test_discovery_insufficient_balance(self, e2e_settings):
         """Test discovery workflow with insufficient balance."""
@@ -192,28 +189,26 @@ class TestDiscoveryWorkflowE2E:
         mock_firestore = MagicMock()
         mock_firestore.get_or_create_wallet = AsyncMock(return_value=mock_wallet)
         mock_firestore.get_wallet = AsyncMock(return_value=mock_wallet)
-        
-        from services.scraper.service import ScraperService
-        from services.ai_suggester.service import AISuggesterService
+
         from services.trader.service import TraderService
-        
+
         trader = TraderService(
             firestore_client=mock_firestore,
             settings=e2e_settings,
         )
-        
+
         workflow = DiscoveryWorkflow(
             scraper_service=MagicMock(),
             ai_service=MagicMock(),
             trader_service=trader,
             settings=e2e_settings,
         )
-        
+
         result = await workflow.run(TradingMode.FAKE)
-        
+
         assert result.success is False
         assert any("balance" in e.lower() for e in result.errors)
-    
+
     @pytest.mark.asyncio
     async def test_discovery_no_tradeable_markets(self, e2e_settings):
         """Test discovery when no markets pass filters."""
@@ -221,34 +216,34 @@ class TestDiscoveryWorkflowE2E:
         mock_polymarket.get_markets = AsyncMock(return_value=[])
         mock_polymarket.__aenter__ = AsyncMock(return_value=mock_polymarket)
         mock_polymarket.__aexit__ = AsyncMock(return_value=None)
-        
+
         mock_wallet = Wallet(wallet_id="test", balance=1000.0)
         mock_firestore = MagicMock()
         mock_firestore.get_or_create_wallet = AsyncMock(return_value=mock_wallet)
         mock_firestore.get_wallet = AsyncMock(return_value=mock_wallet)
-        
+
         from services.scraper.service import ScraperService
         from services.trader.service import TraderService
-        
+
         scraper = ScraperService(
             polymarket_client=mock_polymarket,
             settings=e2e_settings,
         )
-        
+
         trader = TraderService(
             firestore_client=mock_firestore,
             settings=e2e_settings,
         )
-        
+
         workflow = DiscoveryWorkflow(
             scraper_service=scraper,
             ai_service=MagicMock(),
             trader_service=trader,
             settings=e2e_settings,
         )
-        
+
         result = await workflow.run(TradingMode.FAKE)
-        
+
         assert result.success is True
         assert result.markets_analyzed == 0
         assert result.orders_placed == 0

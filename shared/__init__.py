@@ -6,18 +6,18 @@ This package contains shared utilities, clients, and models used across all serv
 
 from shared.config import Settings, get_settings
 from shared.models import (
+    AIAnalysisResult,
+    AISuggestion,
     Market,
     MarketOutcome,
-    Position,
     Order,
     OrderSide,
     OrderStatus,
+    Position,
     TradingMode,
-    Wallet,
     Transaction,
     TransactionType,
-    AISuggestion,
-    AIAnalysisResult,
+    Wallet,
     WorkflowState,
 )
 

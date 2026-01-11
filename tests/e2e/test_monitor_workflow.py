@@ -2,19 +2,16 @@
 End-to-end tests for the monitor workflow.
 """
 
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from services.orchestrator.workflows import MonitorWorkflow
 from shared.models import (
-    Order,
-    OrderStatus,
     Position,
     TradingMode,
     Wallet,
 )
-from services.orchestrator.workflows import MonitorWorkflow
 
 
 @pytest.fixture
@@ -78,11 +75,9 @@ def mock_positions():
 @pytest.mark.e2e
 class TestMonitorWorkflowE2E:
     """End-to-end tests for monitor workflow."""
-    
+
     @pytest.mark.asyncio
-    async def test_complete_monitor_flow_triggers_sells(
-        self, e2e_settings, mock_positions
-    ):
+    async def test_complete_monitor_flow_triggers_sells(self, e2e_settings, mock_positions):
         """Test complete monitor workflow that triggers sells."""
         # Create mock services
         mock_wallet = Wallet(wallet_id="test", balance=500.0)
@@ -92,56 +87,56 @@ class TestMonitorWorkflowE2E:
         mock_firestore.update_wallet_balance = AsyncMock(return_value=mock_wallet)
         mock_firestore.create_transaction = AsyncMock()
         mock_firestore.delete_position = AsyncMock(return_value=True)
-        
-        from services.trader.service import TraderService
+
         from services.monitor.service import MonitorService
-        
+        from services.trader.service import TraderService
+
         trader = TraderService(
             firestore_client=mock_firestore,
             settings=e2e_settings,
         )
-        
+
         monitor = MonitorService(
             trader_service=trader,
             firestore_client=mock_firestore,
             settings=e2e_settings,
         )
-        
+
         workflow = MonitorWorkflow(
             monitor_service=monitor,
             settings=e2e_settings,
         )
-        
+
         result = await workflow.run(TradingMode.FAKE)
-        
+
         # Should trigger sells for pos-profit (take-profit) and pos-loss (stop-loss)
         assert result.workflow_id == "monitor"
         assert result.success is True
         assert result.orders_placed == 2  # Both profit and loss positions sold
-    
+
     @pytest.mark.asyncio
     async def test_monitor_no_positions(self, e2e_settings):
         """Test monitor workflow with no open positions."""
         mock_firestore = MagicMock()
         mock_firestore.get_open_positions = AsyncMock(return_value=[])
-        
+
         from services.monitor.service import MonitorService
-        
+
         monitor = MonitorService(
             firestore_client=mock_firestore,
             settings=e2e_settings,
         )
-        
+
         workflow = MonitorWorkflow(
             monitor_service=monitor,
             settings=e2e_settings,
         )
-        
+
         result = await workflow.run(TradingMode.FAKE)
-        
+
         assert result.success is True
         assert result.orders_placed == 0
-    
+
     @pytest.mark.asyncio
     async def test_monitor_all_positions_within_threshold(self, e2e_settings):
         """Test monitor when all positions are within thresholds."""
@@ -171,33 +166,32 @@ class TestMonitorWorkflowE2E:
                 mode=TradingMode.FAKE,
             ),
         ]
-        
+
         mock_firestore = MagicMock()
         mock_firestore.get_open_positions = AsyncMock(return_value=neutral_positions)
-        
+
         from services.monitor.service import MonitorService
-        from services.trader.service import TraderService
-        
+
         trader = MagicMock()
         trader.place_sell_order = AsyncMock()
-        
+
         monitor = MonitorService(
             trader_service=trader,
             firestore_client=mock_firestore,
             settings=e2e_settings,
         )
-        
+
         workflow = MonitorWorkflow(
             monitor_service=monitor,
             settings=e2e_settings,
         )
-        
+
         result = await workflow.run(TradingMode.FAKE)
-        
+
         assert result.success is True
         assert result.orders_placed == 0
         trader.place_sell_order.assert_not_called()
-    
+
     @pytest.mark.asyncio
     async def test_monitor_edge_case_exactly_at_threshold(self, e2e_settings):
         """Test monitor with position exactly at stop-loss threshold."""
@@ -215,7 +209,7 @@ class TestMonitorWorkflowE2E:
                 mode=TradingMode.FAKE,
             ),
         ]
-        
+
         mock_wallet = Wallet(wallet_id="test", balance=100.0)
         mock_firestore = MagicMock()
         mock_firestore.get_open_positions = AsyncMock(return_value=edge_positions)
@@ -223,28 +217,28 @@ class TestMonitorWorkflowE2E:
         mock_firestore.update_wallet_balance = AsyncMock(return_value=mock_wallet)
         mock_firestore.create_transaction = AsyncMock()
         mock_firestore.delete_position = AsyncMock(return_value=True)
-        
-        from services.trader.service import TraderService
+
         from services.monitor.service import MonitorService
-        
+        from services.trader.service import TraderService
+
         trader = TraderService(
             firestore_client=mock_firestore,
             settings=e2e_settings,
         )
-        
+
         monitor = MonitorService(
             trader_service=trader,
             firestore_client=mock_firestore,
             settings=e2e_settings,
         )
-        
+
         workflow = MonitorWorkflow(
             monitor_service=monitor,
             settings=e2e_settings,
         )
-        
+
         result = await workflow.run(TradingMode.FAKE)
-        
+
         # Should trigger stop-loss at exactly -15%
         assert result.success is True
         assert result.orders_placed == 1

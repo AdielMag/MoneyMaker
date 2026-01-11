@@ -7,12 +7,12 @@ Provides endpoints for monitoring positions and triggering sells.
 from typing import Any
 
 import structlog
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from services.monitor.service import MonitorService, get_monitor_service
 from shared.config import get_settings
 from shared.models import HealthResponse, Position, TradingMode
-from services.monitor.service import MonitorService, get_monitor_service
 
 logger = structlog.get_logger(__name__)
 
@@ -67,7 +67,7 @@ async def get_positions(mode: TradingMode) -> list[dict[str, Any]]:
     Get open positions for a trading mode.
     """
     service = get_service()
-    
+
     try:
         positions = await service.get_positions(mode)
         positions = await service.update_position_prices(positions)
@@ -83,7 +83,7 @@ async def get_positions_summary(mode: TradingMode) -> dict[str, Any]:
     Get summary of current positions.
     """
     service = get_service()
-    
+
     try:
         return await service.get_positions_summary(mode)
     except Exception as e:
@@ -100,12 +100,12 @@ async def get_positions_summary(mode: TradingMode) -> dict[str, Any]:
 async def monitor_positions(mode: TradingMode) -> dict[str, Any]:
     """
     Monitor all positions and trigger sells as needed.
-    
+
     Checks each position against stop-loss and take-profit thresholds,
     executing sell orders when triggered.
     """
     service = get_service()
-    
+
     try:
         results = await service.monitor_positions(mode)
         return results
@@ -120,11 +120,11 @@ async def check_position(position: dict[str, Any]) -> dict[str, Any]:
     Check if a single position should be sold.
     """
     service = get_service()
-    
+
     try:
         pos = Position(**position)
         should_sell, action, reason = await service.check_position(pos)
-        
+
         return {
             "position_id": pos.id,
             "should_sell": should_sell,
@@ -165,7 +165,7 @@ async def get_monitor_config() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host=settings.api.host,

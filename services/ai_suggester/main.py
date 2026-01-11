@@ -11,9 +11,9 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from services.ai_suggester.service import AISuggesterService, get_ai_suggester_service
 from shared.config import get_settings
 from shared.models import AIAnalysisResult, AISuggestion, HealthResponse, Market
-from services.ai_suggester.service import AISuggesterService, get_ai_suggester_service
 
 logger = structlog.get_logger(__name__)
 
@@ -53,7 +53,7 @@ def get_service() -> AISuggesterService:
 
 class AnalyzeMarketsRequest(BaseModel):
     """Request model for market analysis."""
-    
+
     markets: list[dict[str, Any]] = Field(..., description="Markets to analyze")
     max_suggestions: int = Field(default=5, ge=1, le=10)
     confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
@@ -61,7 +61,7 @@ class AnalyzeMarketsRequest(BaseModel):
 
 class TradeDecisionRequest(BaseModel):
     """Request model for trade decision."""
-    
+
     suggestion: dict[str, Any] = Field(..., description="AI suggestion to evaluate")
     wallet_balance: float = Field(..., gt=0, description="Current wallet balance")
     max_position_percent: float = Field(default=0.1, gt=0, le=0.5)
@@ -69,7 +69,7 @@ class TradeDecisionRequest(BaseModel):
 
 class TradeDecisionResponse(BaseModel):
     """Response model for trade decision."""
-    
+
     should_trade: bool
     reason: str
     recommended_size: float
@@ -95,12 +95,12 @@ async def health_check() -> HealthResponse:
 async def analyze_markets(request: AnalyzeMarketsRequest) -> AIAnalysisResult:
     """
     Analyze markets and generate trading suggestions.
-    
+
     Accepts a list of markets and returns AI-generated suggestions
     with confidence scores and reasoning.
     """
     service = get_service()
-    
+
     try:
         # Convert dict markets to Market objects
         markets = []
@@ -110,18 +110,18 @@ async def analyze_markets(request: AnalyzeMarketsRequest) -> AIAnalysisResult:
             except Exception as e:
                 logger.warning("invalid_market_data", error=str(e))
                 continue
-        
+
         if not markets:
             raise HTTPException(status_code=400, detail="No valid markets provided")
-        
+
         result = await service.analyze_markets(
             markets=markets,
             max_suggestions=request.max_suggestions,
             confidence_threshold=request.confidence_threshold,
         )
-        
+
         return result
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -138,7 +138,7 @@ async def get_top_suggestions(
     Get top N suggestions by confidence.
     """
     service = get_service()
-    
+
     try:
         markets = [Market(**m) for m in request.markets]
         suggestions = await service.get_top_suggestions(markets, top_n=top_n)
@@ -154,7 +154,7 @@ async def get_market_insight(market: dict[str, Any]) -> dict[str, str]:
     Get a brief AI insight for a single market.
     """
     service = get_service()
-    
+
     try:
         market_obj = Market(**market)
         insight = await service.get_market_insight(market_obj)
@@ -174,7 +174,7 @@ async def assess_risk(
     Assess the risk of a potential trade.
     """
     service = get_service()
-    
+
     try:
         market_obj = Market(**market)
         assessment = await service.assess_trade_risk(
@@ -194,7 +194,7 @@ async def should_trade(request: TradeDecisionRequest) -> TradeDecisionResponse:
     Determine if a suggested trade should be executed.
     """
     service = get_service()
-    
+
     try:
         suggestion = AISuggestion(**request.suggestion)
         should_trade, reason, size = await service.should_trade(
@@ -238,7 +238,7 @@ async def get_ai_config() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host=settings.api.host,

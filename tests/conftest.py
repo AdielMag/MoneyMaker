@@ -4,10 +4,11 @@ Shared pytest fixtures and test configuration for MoneyMaker.
 
 import json
 import os
+from collections.abc import Generator
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, AsyncGenerator, Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from faker import Faker
@@ -139,14 +140,12 @@ def mock_polymarket_client() -> MagicMock:
 def mock_gemini_client() -> MagicMock:
     """Create a mocked Gemini AI client."""
     client = MagicMock()
-    client.analyze_markets = AsyncMock(return_value={
-        "suggestions": [],
-        "confidence": 0.0,
-        "reasoning": "No markets analyzed"
-    })
-    client.generate_content = AsyncMock(return_value=MagicMock(
-        text='{"suggestions": [], "confidence": 0.0}'
-    ))
+    client.analyze_markets = AsyncMock(
+        return_value={"suggestions": [], "confidence": 0.0, "reasoning": "No markets analyzed"}
+    )
+    client.generate_content = AsyncMock(
+        return_value=MagicMock(text='{"suggestions": [], "confidence": 0.0}')
+    )
     return client
 
 
@@ -154,24 +153,23 @@ def mock_gemini_client() -> MagicMock:
 def mock_firestore_client() -> MagicMock:
     """Create a mocked Firestore client."""
     client = MagicMock()
-    
+
     # Mock collection references
     mock_collection = MagicMock()
     mock_doc = MagicMock()
-    mock_doc.get = MagicMock(return_value=MagicMock(
-        exists=True,
-        to_dict=MagicMock(return_value={})
-    ))
+    mock_doc.get = MagicMock(
+        return_value=MagicMock(exists=True, to_dict=MagicMock(return_value={}))
+    )
     mock_doc.set = AsyncMock()
     mock_doc.update = AsyncMock()
     mock_doc.delete = AsyncMock()
-    
+
     mock_collection.document = MagicMock(return_value=mock_doc)
     mock_collection.where = MagicMock(return_value=mock_collection)
     mock_collection.stream = MagicMock(return_value=iter([]))
-    
+
     client.collection = MagicMock(return_value=mock_collection)
-    
+
     return client
 
 

@@ -10,9 +10,9 @@ import structlog
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from shared.config import get_settings
-from shared.models import HealthResponse, ErrorResponse, Market, MarketQueryParams
 from services.scraper.service import ScraperService, get_scraper_service
+from shared.config import get_settings
+from shared.models import HealthResponse, Market
 
 logger = structlog.get_logger(__name__)
 
@@ -76,17 +76,17 @@ async def get_markets(
 ) -> list[Market]:
     """
     Get markets from Polymarket.
-    
+
     Returns active markets, optionally filtered by default criteria.
     """
     service = get_service()
-    
+
     try:
         if filtered:
             markets, _ = await service.get_filtered_markets(limit=limit, offset=offset)
         else:
             markets = await service.get_markets(limit=limit, offset=offset)
-        
+
         return markets
     except Exception as e:
         logger.error("get_markets_error", error=str(e))
@@ -99,11 +99,11 @@ async def get_tradeable_markets(
 ) -> list[Market]:
     """
     Get markets ready for trading.
-    
+
     Returns filtered markets sorted by volume/opportunity.
     """
     service = get_service()
-    
+
     try:
         markets = await service.get_tradeable_markets(max_markets=max_markets)
         return markets
@@ -118,7 +118,7 @@ async def get_market(market_id: str) -> Market:
     Get a specific market by ID.
     """
     service = get_service()
-    
+
     try:
         market = await service.get_market(market_id)
         if market is None:
@@ -140,15 +140,15 @@ async def filter_markets(
 ) -> dict[str, Any]:
     """
     Fetch and filter markets with custom criteria.
-    
+
     Returns filtered markets and summary statistics.
     """
     service = get_service()
-    
+
     try:
         # Fetch base markets
         markets, summary = await service.get_filtered_markets(limit=limit * 2)
-        
+
         # Apply custom filters
         if category or min_volume is not None or max_time_hours is not None:
             markets = service.apply_custom_filter(
@@ -157,10 +157,10 @@ async def filter_markets(
                 min_volume=min_volume,
                 max_time_hours=max_time_hours,
             )
-        
+
         # Limit results
         markets = markets[:limit]
-        
+
         return {
             "markets": [m.model_dump() for m in markets],
             "count": len(markets),
@@ -182,21 +182,21 @@ async def get_markets_summary() -> dict[str, Any]:
     Get summary statistics about available markets.
     """
     service = get_service()
-    
+
     try:
         # Fetch a batch of markets
         markets, summary = await service.get_filtered_markets(limit=100)
-        
+
         # Calculate additional stats
         if markets:
             avg_volume = sum(m.volume for m in markets) / len(markets)
             avg_liquidity = sum(m.liquidity for m in markets) / len(markets)
-            categories = list(set(m.category for m in markets if m.category))
+            categories = list({m.category for m in markets if m.category})
         else:
             avg_volume = 0
             avg_liquidity = 0
             categories = []
-        
+
         return {
             **summary,
             "average_volume": avg_volume,
@@ -220,7 +220,7 @@ async def get_filter_config() -> dict[str, Any]:
     """
     settings = get_settings()
     config = settings.market_filters
-    
+
     return {
         "min_volume": config.min_volume,
         "max_time_to_resolution_hours": config.max_time_to_resolution_hours,
@@ -238,7 +238,7 @@ async def get_filter_config() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host=settings.api.host,

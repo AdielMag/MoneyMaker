@@ -23,12 +23,12 @@ from shared.models import TradingMode, WorkflowState
 async def init_wallet(client: FirestoreClient, initial_balance: float = 1000.0) -> None:
     """Initialize default wallet."""
     print(f"Creating default wallet with ${initial_balance} balance...")
-    
+
     existing = await client.get_wallet("default")
     if existing:
         print(f"  Wallet already exists with ${existing.balance} balance")
         response = input("  Reset to initial balance? (y/N): ")
-        if response.lower() == 'y':
+        if response.lower() == "y":
             wallet = await client.update_wallet_balance("default", initial_balance)
             print(f"  Wallet reset to ${wallet.balance}")
         else:
@@ -41,17 +41,19 @@ async def init_wallet(client: FirestoreClient, initial_balance: float = 1000.0) 
 async def init_workflow_states(client: FirestoreClient) -> None:
     """Initialize workflow states."""
     print("\nInitializing workflow states...")
-    
+
     workflows = ["discovery", "monitor"]
     modes = [TradingMode.FAKE, TradingMode.REAL]
-    
+
     for workflow_id in workflows:
         for mode in modes:
             # Check if state exists
             existing = await client.get_workflow_state(workflow_id, mode)
-            
+
             if existing:
-                print(f"  {workflow_id}/{mode.value}: exists (enabled={existing.enabled}, runs={existing.run_count})")
+                print(
+                    f"  {workflow_id}/{mode.value}: exists (enabled={existing.enabled}, runs={existing.run_count})"
+                )
             else:
                 # Create new state - only enable fake mode by default
                 state = WorkflowState(
@@ -91,15 +93,15 @@ async def main() -> None:
     print("MoneyMaker Firestore Initialization")
     print("=" * 60)
     print()
-    
+
     # Check environment
     project_id = os.environ.get("GCP_PROJECT_ID")
     credentials = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    
+
     print(f"Project ID: {project_id or 'NOT SET'}")
     print(f"Credentials: {credentials or 'NOT SET'}")
     print()
-    
+
     if not project_id:
         print("ERROR: GCP_PROJECT_ID environment variable not set")
         if sys.platform == "win32":
@@ -107,21 +109,21 @@ async def main() -> None:
         else:
             print("Run: export GCP_PROJECT_ID=your-project-id")
         sys.exit(1)
-    
+
     client = FirestoreClient()
-    
+
     # Verify connection
     if not await verify_connection(client):
         sys.exit(1)
-    
+
     print()
-    
+
     # Initialize wallet
     await init_wallet(client)
-    
+
     # Initialize workflow states
     await init_workflow_states(client)
-    
+
     print()
     print("=" * 60)
     print("Initialization complete!")
@@ -130,7 +132,9 @@ async def main() -> None:
     print("Next steps:")
     print("  1. Start the orchestrator: uvicorn services.orchestrator.main:app --reload")
     print("  2. Check system status: curl http://localhost:8000/status")
-    print("  3. Trigger discovery: curl -X POST http://localhost:8000/workflow/discover -H 'Content-Type: application/json' -d '{\"mode\": \"fake\"}'")
+    print(
+        "  3. Trigger discovery: curl -X POST http://localhost:8000/workflow/discover -H 'Content-Type: application/json' -d '{\"mode\": \"fake\"}'"
+    )
 
 
 if __name__ == "__main__":

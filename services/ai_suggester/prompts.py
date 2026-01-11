@@ -13,10 +13,10 @@ from shared.models import Market
 class PromptBuilder:
     """
     Builds prompts for Gemini AI market analysis.
-    
+
     Provides various prompt templates for different analysis tasks.
     """
-    
+
     # Base system prompt for market analysis
     SYSTEM_PROMPT = """You are an expert prediction market analyst with deep knowledge of:
 - Probability assessment and calibration
@@ -107,17 +107,17 @@ Respond in JSON:
     ) -> str:
         """
         Build a market analysis prompt.
-        
+
         Args:
             markets: Markets to analyze
             max_suggestions: Maximum suggestions to return
             confidence_threshold: Minimum confidence for suggestions
-            
+
         Returns:
             Formatted prompt string
         """
         markets_text = cls._format_markets(markets)
-        
+
         return cls.ANALYSIS_TEMPLATE.format(
             system_prompt=cls.SYSTEM_PROMPT,
             current_time=datetime.utcnow().isoformat(),
@@ -125,29 +125,27 @@ Respond in JSON:
             confidence_threshold=confidence_threshold,
             markets_text=markets_text,
         )
-    
+
     @classmethod
     def build_insight_prompt(cls, market: Market) -> str:
         """
         Build a quick insight prompt for a single market.
-        
+
         Args:
             market: Market to analyze
-            
+
         Returns:
             Formatted prompt string
         """
-        prices = ", ".join(
-            f"{o.name}: {o.price:.0%}" for o in market.outcomes
-        )
-        
+        prices = ", ".join(f"{o.name}: {o.price:.0%}" for o in market.outcomes)
+
         return cls.INSIGHT_TEMPLATE.format(
             question=market.question,
             category=market.category,
             prices=prices,
             time_to_resolution=market.compute_time_to_resolution(),
         )
-    
+
     @classmethod
     def build_risk_prompt(
         cls,
@@ -158,19 +156,19 @@ Respond in JSON:
     ) -> str:
         """
         Build a risk assessment prompt.
-        
+
         Args:
             market: Market for the trade
             position_size: Proposed position size in USDC
             balance: Current wallet balance
             outcome: Outcome being traded (Yes/No)
-            
+
         Returns:
             Formatted prompt string
         """
         position_percent = (position_size / balance * 100) if balance > 0 else 0
         current_price = market.get_outcome_price(outcome) or 0.5
-        
+
         return cls.RISK_TEMPLATE.format(
             question=market.question,
             position_size=position_size,
@@ -179,33 +177,31 @@ Respond in JSON:
             time_to_resolution=market.compute_time_to_resolution(),
             current_price=current_price,
         )
-    
+
     @classmethod
     def _format_markets(cls, markets: list[Market]) -> str:
         """Format markets list for prompt inclusion."""
         if not markets:
             return "No markets provided."
-        
+
         market_strings = []
         for i, market in enumerate(markets, 1):
-            outcomes_str = ", ".join(
-                f"{o.name}: {o.price:.1%}" for o in market.outcomes
-            )
+            outcomes_str = ", ".join(f"{o.name}: {o.price:.1%}" for o in market.outcomes)
             time_to_res = market.compute_time_to_resolution()
-            
+
             market_str = f"""### Market {i}
 - ID: {market.id}
 - Question: {market.question}
-- Category: {market.category or 'Unknown'}
+- Category: {market.category or "Unknown"}
 - Time to Resolution: {time_to_res:.2f} hours
 - Volume: ${market.volume:,.0f}
 - Liquidity: ${market.liquidity:,.0f}
 - Outcomes: {outcomes_str}
 """
             market_strings.append(market_str)
-        
+
         return "\n".join(market_strings)
-    
+
     @classmethod
     def enhance_prompt_with_context(
         cls,
@@ -214,16 +210,16 @@ Respond in JSON:
     ) -> str:
         """
         Enhance a prompt with additional context.
-        
+
         Args:
             base_prompt: Base prompt to enhance
             context: Additional context to include
-            
+
         Returns:
             Enhanced prompt string
         """
         context_str = "\n## Additional Context\n"
         for key, value in context.items():
             context_str += f"- {key}: {value}\n"
-        
+
         return base_prompt + context_str

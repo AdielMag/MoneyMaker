@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from services.scraper.filters import FilterResult, MarketFilter
 from shared.models import Market, MarketOutcome
-from services.scraper.filters import MarketFilter, FilterResult
 
 
 @pytest.fixture
@@ -50,14 +50,14 @@ def valid_market():
 
 class TestMarketFilter:
     """Tests for MarketFilter class."""
-    
+
     def test_filter_valid_market(self, market_filter, valid_market):
         """Test that valid market passes all filters."""
         result = market_filter.filter_market(valid_market)
-        
+
         assert result.passed is True
         assert result.market.passes_filter is True
-    
+
     def test_filter_market_already_ended(self, market_filter):
         """Test market that has already ended."""
         market = Market(
@@ -68,12 +68,12 @@ class TestMarketFilter:
             liquidity=2500,
             outcomes=[MarketOutcome(name="Yes", price=0.50)],
         )
-        
+
         result = market_filter.filter_market(market)
-        
+
         assert result.passed is False
         assert "already ended" in result.reason
-    
+
     def test_filter_market_too_far_future(self, market_filter):
         """Test market that resolves too far in future."""
         market = Market(
@@ -84,12 +84,12 @@ class TestMarketFilter:
             liquidity=2500,
             outcomes=[MarketOutcome(name="Yes", price=0.50)],
         )
-        
+
         result = market_filter.filter_market(market)
-        
+
         assert result.passed is False
         assert "exceeds maximum" in result.reason
-    
+
     def test_filter_market_resolves_too_soon(self, market_filter):
         """Test market that resolves too soon (< 5 minutes)."""
         market = Market(
@@ -100,12 +100,12 @@ class TestMarketFilter:
             liquidity=2500,
             outcomes=[MarketOutcome(name="Yes", price=0.50)],
         )
-        
+
         result = market_filter.filter_market(market)
-        
+
         assert result.passed is False
         assert "too soon" in result.reason
-    
+
     def test_filter_market_low_volume(self, market_filter):
         """Test market with insufficient volume."""
         market = Market(
@@ -116,12 +116,12 @@ class TestMarketFilter:
             liquidity=2500,
             outcomes=[MarketOutcome(name="Yes", price=0.50)],
         )
-        
+
         result = market_filter.filter_market(market)
-        
+
         assert result.passed is False
         assert "Volume" in result.reason
-    
+
     def test_filter_market_low_liquidity(self, market_filter):
         """Test market with insufficient liquidity."""
         market = Market(
@@ -132,12 +132,12 @@ class TestMarketFilter:
             liquidity=200,  # Below 500 minimum
             outcomes=[MarketOutcome(name="Yes", price=0.50)],
         )
-        
+
         result = market_filter.filter_market(market)
-        
+
         assert result.passed is False
         assert "Liquidity" in result.reason
-    
+
     def test_filter_market_excluded_category(self, market_filter):
         """Test market with excluded category."""
         market = Market(
@@ -149,12 +149,12 @@ class TestMarketFilter:
             liquidity=2500,
             outcomes=[MarketOutcome(name="Yes", price=0.50)],
         )
-        
+
         result = market_filter.filter_market(market)
-        
+
         assert result.passed is False
         assert "excluded" in result.reason
-    
+
     def test_filter_market_extreme_prices(self, market_filter):
         """Test market with extreme outcome prices."""
         market = Market(
@@ -166,15 +166,15 @@ class TestMarketFilter:
             liquidity=2500,
             outcomes=[
                 MarketOutcome(name="Yes", price=0.99),  # Too extreme
-                MarketOutcome(name="No", price=0.01),   # Too extreme
+                MarketOutcome(name="No", price=0.01),  # Too extreme
             ],
         )
-        
+
         result = market_filter.filter_market(market)
-        
+
         assert result.passed is False
         assert "extreme" in result.reason
-    
+
     def test_filter_markets_multiple(self, market_filter, valid_market):
         """Test filtering multiple markets."""
         invalid_market = Market(
@@ -186,14 +186,14 @@ class TestMarketFilter:
             liquidity=2500,
             outcomes=[MarketOutcome(name="Yes", price=0.50)],
         )
-        
+
         markets = [valid_market, invalid_market]
         passing, results = market_filter.filter_markets(markets)
-        
+
         assert len(passing) == 1
         assert passing[0].id == "valid-market"
         assert len(results) == 2
-    
+
     def test_get_filter_summary(self, market_filter, valid_market):
         """Test filter summary generation."""
         invalid_market = Market(
@@ -205,10 +205,10 @@ class TestMarketFilter:
             liquidity=2500,
             outcomes=[MarketOutcome(name="Yes", price=0.50)],
         )
-        
+
         _, results = market_filter.filter_markets([valid_market, invalid_market])
         summary = market_filter.get_filter_summary(results)
-        
+
         assert summary["total_markets"] == 2
         assert summary["passed"] == 1
         assert summary["filtered_out"] == 1
@@ -217,14 +217,14 @@ class TestMarketFilter:
 
 class TestFilterResult:
     """Tests for FilterResult dataclass."""
-    
+
     def test_str_passed(self, valid_market):
         """Test string representation for passed result."""
         result = FilterResult(passed=True, market=valid_market)
-        
+
         assert "PASS" in str(result)
         assert valid_market.id in str(result)
-    
+
     def test_str_failed(self, valid_market):
         """Test string representation for failed result."""
         result = FilterResult(
@@ -232,6 +232,6 @@ class TestFilterResult:
             market=valid_market,
             reason="Test reason",
         )
-        
+
         assert "FAIL" in str(result)
         assert "Test reason" in str(result)
