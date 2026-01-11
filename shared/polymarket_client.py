@@ -218,8 +218,6 @@ class PolymarketClient:
         Returns:
             List of Market objects
         """
-        from datetime import timezone
-
         params: dict[str, Any] = {
             "limit": limit,
             "offset": offset,
@@ -229,7 +227,7 @@ class PolymarketClient:
             params["active"] = "true"
             params["closed"] = "false"
             # Filter to markets that end in the future
-            now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            now_iso = datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
             params["end_date_min"] = now_iso
 
         # Use Gamma API for market data
@@ -275,17 +273,16 @@ class PolymarketClient:
             List of Market objects
         """
         import asyncio
-        from datetime import timezone
 
         # Calculate pages needed
         num_pages = (total_limit + page_size - 1) // page_size
-        
+
         # Build base params
         base_params: dict[str, Any] = {"limit": page_size}
         if active_only:
             base_params["active"] = "true"
             base_params["closed"] = "false"
-            now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            now_iso = datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
             base_params["end_date_min"] = now_iso
 
         url = f"{self.GAMMA_URL}/markets"
