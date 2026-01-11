@@ -9,6 +9,12 @@
 </p>
 
 <p>
+  <a href="https://github.com/AdielMag/MoneyMaker/actions/workflows/test.yml">
+    <img src="https://github.com/AdielMag/MoneyMaker/actions/workflows/test.yml/badge.svg" alt="Tests">
+  </a>
+  <a href="https://codecov.io/gh/AdielMag/MoneyMaker">
+    <img src="https://codecov.io/gh/AdielMag/MoneyMaker/branch/main/graph/badge.svg" alt="codecov">
+  </a>
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/GCP-Cloud%20Run-4285F4?logo=google-cloud" alt="GCP Cloud Run">
   <img src="https://img.shields.io/badge/AI-Gemini%201.5-8E75B2?logo=google" alt="Gemini AI">
@@ -113,7 +119,7 @@ MoneyMaker is an automated trading system for [Polymarket](https://polymarket.co
 **Windows (PowerShell):**
 ```powershell
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/MoneyMaker.git
+git clone https://github.com/AdielMag/MoneyMaker.git
 cd MoneyMaker
 
 # Create virtual environment
@@ -132,7 +138,7 @@ Copy-Item config\env.example .env
 **macOS/Linux:**
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/MoneyMaker.git
+git clone https://github.com/AdielMag/MoneyMaker.git
 cd MoneyMaker
 
 # Create virtual environment
