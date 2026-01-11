@@ -76,13 +76,22 @@ jobs:
         env:
           ENVIRONMENT: test
       
+      - name: Debug - Show coverage file
+        run: |
+          echo "=== Coverage file exists? ==="
+          ls -la coverage.xml || echo "coverage.xml not found!"
+          echo "=== First 50 lines of coverage.xml ==="
+          head -50 coverage.xml || true
+      
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.xml
-          fail_ci_if_error: false
+          files: ./coverage.xml
+          fail_ci_if_error: true
           verbose: true
+          flags: unit
+          name: codecov-moneymaker
       
       - name: Coverage comment on PR
         if: github.event_name == 'pull_request'

@@ -17,14 +17,6 @@ coverage:
         target: 80%
         threshold: 5%
 
-parsers:
-  gcov:
-    branch_detection:
-      conditional: true
-      loop: true
-      method: false
-      macro: false
-
 comment:
   layout: "reach,diff,flags,files"
   behavior: default
@@ -38,13 +30,9 @@ flags:
       - shared/
       - services/
     carryforward: true
-  integration:
-    paths:
-      - shared/
-      - services/
-    carryforward: true
 
 ignore:
   - "tests/**/*"
   - "**/__pycache__/**"
   - "**/conftest.py"
+  - "scripts/**/*"
