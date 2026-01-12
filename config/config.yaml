@@ -23,9 +23,9 @@ trading:
     take_profit_percent: 20           # Take profits earlier (sell if up 20%)
 
 market_filters:
-  min_volume: 500                     # Lower threshold for more options
-  max_time_to_resolution_hours: 2     # Markets resolving within 2 hours
-  min_liquidity: 500
+  min_volume: 100                     # Lower threshold for more options
+  max_time_to_resolution_hours: 48    # Markets resolving within 48 hours (more flexible)
+  min_liquidity: 100
   excluded_categories:
     - sports
     - entertainment

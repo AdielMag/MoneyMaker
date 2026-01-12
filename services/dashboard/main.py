@@ -56,3 +56,26 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 async def root():
     """Serve the main dashboard page."""
     return FileResponse(os.path.join(static_dir, "index.html"))
+
+
+# =============================================================================
+# Main Entry Point
+# =============================================================================
+
+if __name__ == "__main__":
+    import uvicorn
+
+    port = int(os.getenv("PORT", "8080"))
+    host = os.getenv("HOST", "127.0.0.1")
+
+    print("Starting MoneyMaker Dashboard...")
+    print(f"Dashboard URL: http://{host}:{port}")
+    print(f"Orchestrator URL: {ORCHESTRATOR_URL}")
+    print("Press Ctrl+C to stop")
+
+    uvicorn.run(
+        "main:app",
+        host=host,
+        port=port,
+        reload=True,
+    )
