@@ -94,6 +94,7 @@ class TestScraperServiceE2E:
         """Create mock Polymarket client."""
         client = MagicMock()
         client.get_markets = AsyncMock(return_value=mock_markets)
+        client.get_markets_parallel = AsyncMock(return_value=mock_markets)
         client.get_market = AsyncMock(return_value=mock_markets[0])
         client.__aenter__ = AsyncMock(return_value=client)
         client.__aexit__ = AsyncMock(return_value=None)

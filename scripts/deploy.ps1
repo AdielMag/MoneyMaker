@@ -146,6 +146,7 @@ function Deploy-Service {
         --min-instances=0 `
         --max-instances=3 `
         --set-env-vars="ENVIRONMENT=production,GCP_PROJECT_ID=$($env:PROJECT_ID),GCP_REGION=$($env:REGION)" `
+        --set-secrets="POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest" `
         --quiet
     
     if ($LASTEXITCODE -ne 0) {
