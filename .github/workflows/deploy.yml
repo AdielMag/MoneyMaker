@@ -2,12 +2,14 @@ name: Deploy
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
     inputs:
       service:
-        description: 'Service to deploy (orchestrator, scraper, ai_suggester, trader, monitor, all)'
+        description: 'Service to deploy (orchestrator, scraper, ai_suggester, trader, monitor, dashboard, all)'
         required: true
         default: 'all'
         type: choice
@@ -18,6 +20,7 @@ on:
           - ai_suggester
           - trader
           - monitor
+          - dashboard
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -54,7 +57,7 @@ jobs:
     
     strategy:
       matrix:
-        service: [orchestrator, scraper, ai_suggester, trader, monitor]
+        service: [orchestrator, scraper, ai_suggester, trader, monitor, dashboard]
     
     steps:
       - uses: actions/checkout@v4
@@ -122,21 +125,33 @@ jobs:
             echo "tag=latest" >> $GITHUB_OUTPUT
           fi
       
+      - name: Get Cloud Run service name
+        id: service_name
+        run: |
+          # Convert underscores to dashes for valid Cloud Run service name
+          CLOUD_RUN_NAME="moneymaker-${{ matrix.service }}"
+          CLOUD_RUN_NAME="${CLOUD_RUN_NAME//_/-}"
+          echo "name=$CLOUD_RUN_NAME" >> $GITHUB_OUTPUT
+      
       - name: Deploy to Cloud Run
         if: github.event.inputs.service == 'all' || github.event.inputs.service == matrix.service || github.event_name == 'push'
         run: |
-          gcloud run deploy moneymaker-${{ matrix.service }} \
+          gcloud run deploy ${{ steps.service_name.outputs.name }} \
             --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/moneymaker/${{ matrix.service }}:${{ steps.version.outputs.tag }} \
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "ENVIRONMENT=production,GCP_PROJECT_ID=${{ env.PROJECT_ID }}" \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 3 \
+            --set-env-vars "ENVIRONMENT=production,GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCP_REGION=${{ env.REGION }}" \
             --set-secrets "POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest"
       
       - name: Get service URL
         if: github.event.inputs.service == 'all' || github.event.inputs.service == matrix.service || github.event_name == 'push'
         run: |
-          URL=$(gcloud run services describe moneymaker-${{ matrix.service }} --region ${{ env.REGION }} --format 'value(status.url)')
+          URL=$(gcloud run services describe ${{ steps.service_name.outputs.name }} --region ${{ env.REGION }} --format 'value(status.url)')
           echo "Service URL: $URL"
 
   deploy-dashboard:

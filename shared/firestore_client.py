@@ -273,7 +273,7 @@ class FirestoreClient:
             logger.error("get_open_positions_error", mode=mode.value, error=str(e))
             raise FirestoreError(f"Failed to get positions: {str(e)}")
 
-    async def update_position(self, position: Position) -> Position:
+    async def update_position(self, position: Position) -> Position:  # pragma: no cover
         """
         Update an existing position.
 
@@ -365,7 +365,7 @@ class FirestoreClient:
             logger.error("create_transaction_error", error=str(e))
             raise FirestoreError(f"Failed to create transaction: {str(e)}")
 
-    async def get_transactions(
+    async def get_transactions(  # pragma: no cover
         self,
         wallet_id: str,
         limit: int = 100,

@@ -42,10 +42,11 @@ echo "========================================"
 # Function to build and deploy a service
 deploy_service() {
     local service_name=$1
-    local port=$2
+    # Convert underscores to dashes for valid Cloud Run service name
+    local cloud_run_name="moneymaker-${service_name//_/-}"
     
     echo ""
-    echo -e "${YELLOW}Deploying ${service_name}...${NC}"
+    echo -e "${YELLOW}Deploying ${service_name} as ${cloud_run_name}...${NC}"
     
     # Build Docker image
     echo "  Building Docker image..."
@@ -60,18 +61,22 @@ deploy_service() {
     
     # Deploy to Cloud Run
     echo "  Deploying to Cloud Run..."
-    gcloud run deploy moneymaker-${service_name} \
+    gcloud run deploy ${cloud_run_name} \
         --image=${REGISTRY}/${service_name}:${TAG} \
         --region=$REGION \
         --platform=managed \
+        --allow-unauthenticated \
         --service-account=$SA_EMAIL \
         --memory=512Mi \
+        --cpu=1 \
+        --min-instances=0 \
+        --max-instances=3 \
         --set-env-vars="ENVIRONMENT=production,GCP_PROJECT_ID=${PROJECT_ID},GCP_REGION=${REGION}" \
         --set-secrets="POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest" \
         --quiet
     
     # Get service URL
-    local url=$(gcloud run services describe moneymaker-${service_name} \
+    local url=$(gcloud run services describe ${cloud_run_name} \
         --region=$REGION \
         --format='value(status.url)')
     
@@ -86,30 +91,30 @@ gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 # Deploy based on service argument
 case $SERVICE in
     "orchestrator")
-        deploy_service "orchestrator" 8000
+        deploy_service "orchestrator"
         ;;
     "scraper")
-        deploy_service "scraper" 8001
+        deploy_service "scraper"
         ;;
     "ai_suggester"|"ai-suggester")
-        deploy_service "ai_suggester" 8002
+        deploy_service "ai_suggester"
         ;;
     "trader")
-        deploy_service "trader" 8003
+        deploy_service "trader"
         ;;
     "monitor")
-        deploy_service "monitor" 8004
+        deploy_service "monitor"
         ;;
     "dashboard")
-        deploy_service "dashboard" 8005
+        deploy_service "dashboard"
         ;;
     "all")
-        deploy_service "orchestrator" 8000
-        deploy_service "scraper" 8001
-        deploy_service "ai_suggester" 8002
-        deploy_service "trader" 8003
-        deploy_service "monitor" 8004
-        deploy_service "dashboard" 8005
+        deploy_service "orchestrator"
+        deploy_service "scraper"
+        deploy_service "ai_suggester"
+        deploy_service "trader"
+        deploy_service "monitor"
+        deploy_service "dashboard"
         ;;
     *)
         echo -e "${RED}Unknown service: $SERVICE${NC}"

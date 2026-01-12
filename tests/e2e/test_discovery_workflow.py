@@ -127,6 +127,7 @@ class TestDiscoveryWorkflowE2E:
         # Create mock services
         mock_polymarket = MagicMock()
         mock_polymarket.get_markets = AsyncMock(return_value=mock_markets)
+        mock_polymarket.get_markets_parallel = AsyncMock(return_value=mock_markets)
         mock_polymarket.__aenter__ = AsyncMock(return_value=mock_polymarket)
         mock_polymarket.__aexit__ = AsyncMock(return_value=None)
 
@@ -214,6 +215,7 @@ class TestDiscoveryWorkflowE2E:
         """Test discovery when no markets pass filters."""
         mock_polymarket = MagicMock()
         mock_polymarket.get_markets = AsyncMock(return_value=[])
+        mock_polymarket.get_markets_parallel = AsyncMock(return_value=[])
         mock_polymarket.__aenter__ = AsyncMock(return_value=mock_polymarket)
         mock_polymarket.__aexit__ = AsyncMock(return_value=None)
 

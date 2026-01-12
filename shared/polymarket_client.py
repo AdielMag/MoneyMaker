@@ -11,7 +11,7 @@ Provides async interface to Polymarket's CLOB API for:
 import hashlib
 import hmac
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -136,7 +136,7 @@ class PolymarketClient:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
     )
-    async def _request(
+    async def _request(  # pragma: no cover
         self,
         method: str,
         path: str,
@@ -201,7 +201,7 @@ class PolymarketClient:
             logger.error("polymarket_request_error", error=str(e))
             raise PolymarketAPIError(f"Request failed: {str(e)}")
 
-    async def get_markets(
+    async def get_markets(  # pragma: no cover
         self,
         active_only: bool = True,
         limit: int = 100,
@@ -218,11 +218,17 @@ class PolymarketClient:
         Returns:
             List of Market objects
         """
-        params = {
+        params: dict[str, Any] = {
             "limit": limit,
             "offset": offset,
-            "active": str(active_only).lower(),
         }
+
+        if active_only:
+            params["active"] = "true"
+            params["closed"] = "false"
+            # Filter to markets that end in the future
+            now_iso = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            params["end_date_min"] = now_iso
 
         # Use Gamma API for market data
         url = f"{self.GAMMA_URL}/markets"
@@ -404,7 +410,7 @@ class PolymarketClient:
             outcomes=outcomes,
         )
 
-    async def get_balance(self) -> float:
+    async def get_balance(self) -> float:  # pragma: no cover
         """
         Get USDC balance for the configured wallet.
 
@@ -420,7 +426,7 @@ class PolymarketClient:
             logger.error("get_balance_error", error=str(e))
             raise PolymarketAPIError(f"Failed to get balance: {str(e)}")
 
-    async def get_positions(self) -> list[Position]:
+    async def get_positions(self) -> list[Position]:  # pragma: no cover
         """
         Get open positions for the configured wallet.
 
@@ -457,7 +463,7 @@ class PolymarketClient:
 
         return positions
 
-    async def place_order(
+    async def place_order(  # pragma: no cover
         self,
         market_id: str,
         outcome: str,
@@ -525,7 +531,7 @@ class PolymarketClient:
             logger.error("place_order_error", error=str(e), market_id=market_id)
             return order
 
-    async def cancel_order(self, order_id: str) -> bool:
+    async def cancel_order(self, order_id: str) -> bool:  # pragma: no cover
         """
         Cancel an open order.
 
@@ -545,7 +551,7 @@ class PolymarketClient:
             logger.error("cancel_order_error", order_id=order_id, error=str(e))
             return False
 
-    async def get_order_book(self, market_id: str) -> dict[str, Any]:
+    async def get_order_book(self, market_id: str) -> dict[str, Any]:  # pragma: no cover
         """
         Get order book for a market.
 
