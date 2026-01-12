@@ -11,7 +11,7 @@ Provides async interface to Polymarket's CLOB API for:
 import hashlib
 import hmac
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -218,11 +218,17 @@ class PolymarketClient:
         Returns:
             List of Market objects
         """
-        params = {
+        params: dict[str, Any] = {
             "limit": limit,
             "offset": offset,
-            "active": str(active_only).lower(),
         }
+
+        if active_only:
+            params["active"] = "true"
+            params["closed"] = "false"
+            # Filter to markets that end in the future
+            now_iso = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            params["end_date_min"] = now_iso
 
         # Use Gamma API for market data
         url = f"{self.GAMMA_URL}/markets"
@@ -246,6 +252,86 @@ class PolymarketClient:
                 continue
 
         return markets
+
+    async def get_markets_parallel(
+        self,
+        total_limit: int = 500,
+        active_only: bool = True,
+        page_size: int = 100,
+        max_concurrent: int = 5,
+    ) -> list[Market]:
+        """
+        Fetch markets in parallel for faster loading.
+
+        Args:
+            total_limit: Total number of markets to fetch
+            active_only: Only return active markets
+            page_size: Markets per request
+            max_concurrent: Max concurrent requests
+
+        Returns:
+            List of Market objects
+        """
+        import asyncio
+
+        # Calculate pages needed
+        num_pages = (total_limit + page_size - 1) // page_size
+
+        # Build base params
+        base_params: dict[str, Any] = {"limit": page_size}
+        if active_only:
+            base_params["active"] = "true"
+            base_params["closed"] = "false"
+            now_iso = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            base_params["end_date_min"] = now_iso
+
+        url = f"{self.GAMMA_URL}/markets"
+
+        async def fetch_page(offset: int) -> list[dict[str, Any]]:
+            """Fetch a single page of markets."""
+            params = {**base_params, "offset": offset}
+            try:
+                response = await self.client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.warning("fetch_page_error", offset=offset, error=str(e))
+                return []
+
+        # Fetch pages in parallel batches
+        all_data: list[dict[str, Any]] = []
+        offsets = [i * page_size for i in range(num_pages)]
+
+        # Process in batches to respect max_concurrent
+        for i in range(0, len(offsets), max_concurrent):
+            batch_offsets = offsets[i:i + max_concurrent]
+            tasks = [fetch_page(offset) for offset in batch_offsets]
+            results = await asyncio.gather(*tasks)
+            for page_data in results:
+                all_data.extend(page_data)
+
+        logger.info("parallel_fetch_complete", total_fetched=len(all_data), pages=num_pages)
+
+        # Parse all markets
+        markets = []
+        for item in all_data:
+            try:
+                market = self._parse_market(item)
+                if market:
+                    markets.append(market)
+            except Exception as e:
+                logger.warning("parse_market_error", market_id=item.get("id"), error=str(e))
+                continue
+
+        # Deduplicate by market ID (in case of overlap)
+        seen_ids: set[str] = set()
+        unique_markets = []
+        for market in markets:
+            if market.id not in seen_ids:
+                seen_ids.add(market.id)
+                unique_markets.append(market)
+
+        return unique_markets[:total_limit]
 
     async def get_market(self, market_id: str) -> Market | None:
         """

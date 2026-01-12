@@ -58,6 +58,7 @@ class ScraperService:
         self,
         limit: int = 100,
         offset: int = 0,
+        parallel: bool = False,
     ) -> list[Market]:
         """
         Fetch markets from Polymarket.
@@ -65,18 +66,26 @@ class ScraperService:
         Args:
             limit: Maximum number of markets to fetch
             offset: Pagination offset
+            parallel: Use parallel fetching for large requests
 
         Returns:
             List of Market objects
         """
-        logger.info("fetching_markets", limit=limit, offset=offset)
+        logger.info("fetching_markets", limit=limit, offset=offset, parallel=parallel)
 
         async with self.polymarket_client as client:
-            markets = await client.get_markets(
-                active_only=True,
-                limit=limit,
-                offset=offset,
-            )
+            if parallel and limit > 100:
+                # Use parallel fetching for large requests
+                markets = await client.get_markets_parallel(
+                    total_limit=limit,
+                    active_only=True,
+                )
+            else:
+                markets = await client.get_markets(
+                    active_only=True,
+                    limit=limit,
+                    offset=offset,
+                )
 
         logger.info("markets_fetched", count=len(markets))
         return markets
@@ -85,6 +94,7 @@ class ScraperService:
         self,
         limit: int = 100,
         offset: int = 0,
+        parallel: bool = True,
     ) -> tuple[list[Market], dict[str, Any]]:
         """
         Fetch and filter markets.
@@ -92,12 +102,13 @@ class ScraperService:
         Args:
             limit: Maximum markets to fetch
             offset: Pagination offset
+            parallel: Use parallel fetching for faster loading
 
         Returns:
             Tuple of (filtered markets, filter summary)
         """
-        # Fetch markets
-        markets = await self.get_markets(limit=limit, offset=offset)
+        # Fetch markets (use parallel for large fetches)
+        markets = await self.get_markets(limit=limit, offset=offset, parallel=parallel)
 
         if not markets:
             return [], {"total_markets": 0, "passed": 0, "filtered_out": 0}
@@ -143,8 +154,8 @@ class ScraperService:
         Returns:
             List of tradeable markets
         """
-        # Fetch more markets than needed to account for filtering
-        fetch_limit = max_markets * 3
+        # Fetch plenty of markets - Polymarket has thousands
+        fetch_limit = 500
 
         filtered, _ = await self.get_filtered_markets(limit=fetch_limit)
 
