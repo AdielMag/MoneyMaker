@@ -67,12 +67,12 @@ if __name__ == "__main__":
 
     port = int(os.getenv("PORT", "8080"))
     host = os.getenv("HOST", "127.0.0.1")
-    
-    print(f"Starting MoneyMaker Dashboard...")
+
+    print("Starting MoneyMaker Dashboard...")
     print(f"Dashboard URL: http://{host}:{port}")
     print(f"Orchestrator URL: {ORCHESTRATOR_URL}")
-    print(f"Press Ctrl+C to stop")
-    
+    print("Press Ctrl+C to stop")
+
     uvicorn.run(
         "main:app",
         host=host,
