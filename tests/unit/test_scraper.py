@@ -101,6 +101,7 @@ class TestScraperService:
         """Test getting tradeable markets sorted by volume."""
         mock_client = MagicMock()
         mock_client.get_markets = AsyncMock(return_value=sample_markets)
+        mock_client.get_markets_parallel = AsyncMock(return_value=sample_markets)
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
 

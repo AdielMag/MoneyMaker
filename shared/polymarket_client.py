@@ -11,7 +11,7 @@ Provides async interface to Polymarket's CLOB API for:
 import hashlib
 import hmac
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -227,7 +227,7 @@ class PolymarketClient:
             params["active"] = "true"
             params["closed"] = "false"
             # Filter to markets that end in the future
-            now_iso = datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            now_iso = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             params["end_date_min"] = now_iso
 
         # Use Gamma API for market data
@@ -282,7 +282,7 @@ class PolymarketClient:
         if active_only:
             base_params["active"] = "true"
             base_params["closed"] = "false"
-            now_iso = datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            now_iso = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             base_params["end_date_min"] = now_iso
 
         url = f"{self.GAMMA_URL}/markets"
