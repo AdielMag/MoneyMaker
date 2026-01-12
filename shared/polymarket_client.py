@@ -261,7 +261,7 @@ class PolymarketClient:
     ) -> list[Market]:
         """
         Fetch markets in parallel for faster loading.
-        
+
         Stops pagination when a page returns fewer results than page_size,
         indicating we've reached the end of available markets.
 
@@ -306,7 +306,7 @@ class PolymarketClient:
             batch_offsets = [offset + (i * page_size) for i in range(max_concurrent)]
             tasks = [fetch_page(off) for off in batch_offsets]
             results = await asyncio.gather(*tasks)
-            
+
             # Process results and check if we should continue
             found_incomplete_page = False
             for page_data in results:
@@ -314,11 +314,11 @@ class PolymarketClient:
                 # If any page returned fewer than page_size, we've reached the end
                 if len(page_data) < page_size:
                     found_incomplete_page = True
-            
+
             # If we found an incomplete page, we're done
             if found_incomplete_page:
                 break
-            
+
             # Move to next batch
             offset += max_concurrent * page_size
             page_num += max_concurrent
