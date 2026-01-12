@@ -2,6 +2,9 @@
 # Default configuration values - override with environment variables
 # Updated with safer testing values
 
+# GCP Configuration
+gcp_project_id: "money-maker-484006"
+
 workflows:
   real_money:
     enabled: false                    # ⚠️ Keep false until ready for real trading!

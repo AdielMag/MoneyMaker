@@ -247,7 +247,100 @@ class PolymarketClient:
 
         return markets
 
-    async def get_market(self, market_id: str) -> Market | None:
+    async def get_markets_parallel(  # pragma: no cover
+        self,
+        active_only: bool = True,
+        page_size: int = 100,
+        max_concurrent: int = 5,
+    ) -> list[Market]:
+        """
+        Fetch markets in parallel for faster loading.
+        
+        Stops pagination when a page returns fewer results than page_size,
+        indicating we've reached the end of available markets.
+
+        Args:
+            active_only: Only return active markets
+            page_size: Markets per request
+            max_concurrent: Max concurrent requests
+
+        Returns:
+            List of Market objects
+        """
+        import asyncio
+
+        # Build base params
+        base_params: dict[str, Any] = {"limit": page_size}
+        if active_only:
+            base_params["active"] = "true"
+            base_params["closed"] = "false"
+            now_iso = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            base_params["end_date_min"] = now_iso
+
+        url = f"{self.GAMMA_URL}/markets"
+
+        async def fetch_page(offset: int) -> list[dict[str, Any]]:
+            """Fetch a single page of markets."""
+            params = {**base_params, "offset": offset}
+            try:
+                response = await self.client.get(url, params=params)
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.warning("fetch_page_error", offset=offset, error=str(e))
+                return []
+
+        # Fetch pages in parallel batches until we get fewer than page_size results
+        all_data: list[dict[str, Any]] = []
+        offset = 0
+        page_num = 0
+
+        while True:
+            # Fetch a batch of pages
+            batch_offsets = [offset + (i * page_size) for i in range(max_concurrent)]
+            tasks = [fetch_page(off) for off in batch_offsets]
+            results = await asyncio.gather(*tasks)
+            
+            # Process results and check if we should continue
+            found_incomplete_page = False
+            for page_data in results:
+                all_data.extend(page_data)
+                # If any page returned fewer than page_size, we've reached the end
+                if len(page_data) < page_size:
+                    found_incomplete_page = True
+            
+            # If we found an incomplete page, we're done
+            if found_incomplete_page:
+                break
+            
+            # Move to next batch
+            offset += max_concurrent * page_size
+            page_num += max_concurrent
+
+        logger.info("parallel_fetch_complete", total_fetched=len(all_data), pages=page_num)
+
+        # Parse all markets
+        markets = []
+        for item in all_data:
+            try:
+                market = self._parse_market(item)
+                if market:
+                    markets.append(market)
+            except Exception as e:
+                logger.warning("parse_market_error", market_id=item.get("id"), error=str(e))
+                continue
+
+        # Deduplicate by market ID (in case of overlap)
+        seen_ids: set[str] = set()
+        unique_markets = []
+        for market in markets:
+            if market.id not in seen_ids:
+                seen_ids.add(market.id)
+                unique_markets.append(market)
+
+        return unique_markets
+
+    async def get_market(self, market_id: str) -> Market | None:  # pragma: no cover
         """
         Get a specific market by ID.
 

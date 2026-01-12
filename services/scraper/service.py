@@ -72,11 +72,19 @@ class ScraperService:
         logger.info("fetching_markets", limit=limit, offset=offset)
 
         async with self.polymarket_client as client:
-            markets = await client.get_markets(
-                active_only=True,
-                limit=limit,
-                offset=offset,
-            )
+            if parallel and limit > 100:
+                # Use parallel fetching for large requests
+                markets = await client.get_markets_parallel(
+                    active_only=True,
+                )
+                # Apply limit after fetching (since parallel fetch gets all available)
+                markets = markets[:limit]
+            else:
+                markets = await client.get_markets(
+                    active_only=True,
+                    limit=limit,
+                    offset=offset,
+                )
 
         logger.info("markets_fetched", count=len(markets))
         return markets
