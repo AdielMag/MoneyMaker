@@ -1,6 +1,7 @@
 [run]
 branch = True
 source = shared,services
+relative_files = True
 omit = 
     */tests/*
     */__pycache__/*
