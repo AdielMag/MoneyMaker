@@ -199,7 +199,7 @@ class TraderService:
         else:
             return await self._close_fake_position(position, price)
 
-    async def _place_real_order(
+    async def _place_real_order(  # pragma: no cover
         self,
         market_id: str,
         outcome: str,

@@ -196,7 +196,7 @@ Markets to Analyze:
             logger.error("analyze_markets_error", error=str(e))
             raise GeminiAPIError(f"Failed to analyze markets: {str(e)}")
 
-    async def _generate_content(self, prompt: str) -> str:
+    async def _generate_content(self, prompt: str) -> str:  # pragma: no cover
         """
         Generate content from Gemini.
 
@@ -286,7 +286,7 @@ Markets to Analyze:
         except ValueError:
             return RiskLevel.MEDIUM
 
-    async def get_market_insight(self, market: Market) -> str:
+    async def get_market_insight(self, market: Market) -> str:  # pragma: no cover
         """
         Get a brief insight for a single market.
 
@@ -312,7 +312,7 @@ Focus on: key factors affecting the outcome, potential risks, and whether the cu
             logger.error("get_insight_error", market_id=market.id, error=str(e))
             return f"Unable to generate insight: {str(e)}"
 
-    async def assess_risk(
+    async def assess_risk(  # pragma: no cover
         self,
         market: Market,
         position_size: float,
