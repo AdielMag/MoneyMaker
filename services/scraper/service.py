@@ -77,9 +77,10 @@ class ScraperService:
             if parallel and limit > 100:
                 # Use parallel fetching for large requests
                 markets = await client.get_markets_parallel(
-                    total_limit=limit,
                     active_only=True,
                 )
+                # Apply limit after fetching (since parallel fetch gets all available)
+                markets = markets[:limit]
             else:
                 markets = await client.get_markets(
                     active_only=True,

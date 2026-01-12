@@ -255,7 +255,6 @@ class PolymarketClient:
 
     async def get_markets_parallel(  # pragma: no cover
         self,
-        total_limit: int = 500,
         active_only: bool = True,
         page_size: int = 100,
         max_concurrent: int = 5,
@@ -263,8 +262,10 @@ class PolymarketClient:
         """
         Fetch markets in parallel for faster loading.
 
+        Stops pagination when a page returns fewer results than page_size,
+        indicating we've reached the end of available markets.
+
         Args:
-            total_limit: Total number of markets to fetch
             active_only: Only return active markets
             page_size: Markets per request
             max_concurrent: Max concurrent requests
@@ -273,9 +274,6 @@ class PolymarketClient:
             List of Market objects
         """
         import asyncio
-
-        # Calculate pages needed
-        num_pages = (total_limit + page_size - 1) // page_size
 
         # Build base params
         base_params: dict[str, Any] = {"limit": page_size}
@@ -298,19 +296,34 @@ class PolymarketClient:
                 logger.warning("fetch_page_error", offset=offset, error=str(e))
                 return []
 
-        # Fetch pages in parallel batches
+        # Fetch pages in parallel batches until we get fewer than page_size results
         all_data: list[dict[str, Any]] = []
-        offsets = [i * page_size for i in range(num_pages)]
+        offset = 0
+        page_num = 0
 
-        # Process in batches to respect max_concurrent
-        for i in range(0, len(offsets), max_concurrent):
-            batch_offsets = offsets[i:i + max_concurrent]
-            tasks = [fetch_page(offset) for offset in batch_offsets]
+        while True:
+            # Fetch a batch of pages
+            batch_offsets = [offset + (i * page_size) for i in range(max_concurrent)]
+            tasks = [fetch_page(off) for off in batch_offsets]
             results = await asyncio.gather(*tasks)
+
+            # Process results and check if we should continue
+            found_incomplete_page = False
             for page_data in results:
                 all_data.extend(page_data)
+                # If any page returned fewer than page_size, we've reached the end
+                if len(page_data) < page_size:
+                    found_incomplete_page = True
 
-        logger.info("parallel_fetch_complete", total_fetched=len(all_data), pages=num_pages)
+            # If we found an incomplete page, we're done
+            if found_incomplete_page:
+                break
+
+            # Move to next batch
+            offset += max_concurrent * page_size
+            page_num += max_concurrent
+
+        logger.info("parallel_fetch_complete", total_fetched=len(all_data), pages=page_num)
 
         # Parse all markets
         markets = []
@@ -331,7 +344,7 @@ class PolymarketClient:
                 seen_ids.add(market.id)
                 unique_markets.append(market)
 
-        return unique_markets[:total_limit]
+        return unique_markets
 
     async def get_market(self, market_id: str) -> Market | None:  # pragma: no cover
         """
