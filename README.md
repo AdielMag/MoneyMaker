@@ -272,6 +272,43 @@ The dashboard service provides a web interface for monitoring fake trading activ
 - AI suggestions with confidence scores
 - Auto-refresh every 30 seconds
 - Responsive design with dark theme
+- Manual workflow triggers (Discovery & Monitor)
+
+#### Running Dashboard Locally
+
+You can run the dashboard locally and connect it to your GCP orchestrator:
+
+**Windows (PowerShell):**
+```powershell
+# Run dashboard locally connected to GCP orchestrator
+.\scripts\run_dashboard_local.ps1 -OrchestratorUrl "https://your-orchestrator-url.run.app"
+
+# Or with custom port
+.\scripts\run_dashboard_local.ps1 -OrchestratorUrl "https://your-orchestrator-url.run.app" -Port 3000
+```
+
+**macOS/Linux:**
+```bash
+# Run dashboard locally connected to GCP orchestrator
+./scripts/run_dashboard_local.sh https://your-orchestrator-url.run.app
+
+# Or with custom port and host
+PORT=3000 HOST=0.0.0.0 ./scripts/run_dashboard_local.sh https://your-orchestrator-url.run.app
+```
+
+**Manual Setup:**
+```bash
+# Set orchestrator URL environment variable
+export ORCHESTRATOR_URL="https://your-orchestrator-url.run.app"  # Linux/Mac
+$env:ORCHESTRATOR_URL="https://your-orchestrator-url.run.app"     # Windows PowerShell
+
+# Run dashboard (from project root)
+uvicorn services.dashboard.main:app --host 127.0.0.1 --port 8080 --reload
+
+# Dashboard will be available at http://127.0.0.1:8080
+```
+
+**Note:** Make sure your GCP orchestrator has CORS enabled (default: allows all origins) to accept requests from your local dashboard.
 
 ### Example Requests
 

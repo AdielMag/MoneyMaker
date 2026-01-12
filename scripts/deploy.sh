@@ -61,7 +61,9 @@ deploy_service() {
     
     # Deploy to Cloud Run
     echo "  Deploying to Cloud Run..."
-    gcloud run deploy ${cloud_run_name} \
+    
+    # Build deployment command
+    DEPLOY_CMD="gcloud run deploy ${cloud_run_name} \
         --image=${REGISTRY}/${service_name}:${TAG} \
         --region=$REGION \
         --platform=managed \
@@ -71,9 +73,16 @@ deploy_service() {
         --cpu=1 \
         --min-instances=0 \
         --max-instances=3 \
-        --set-env-vars="ENVIRONMENT=production,GCP_PROJECT_ID=${PROJECT_ID},GCP_REGION=${REGION}" \
-        --set-secrets="POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest" \
-        --quiet
+        --set-env-vars=\"ENVIRONMENT=production,GCP_PROJECT_ID=${PROJECT_ID},GCP_REGION=${REGION}\" \
+        --set-secrets=\"POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest\""
+    
+    # Add timeout for orchestrator service (15 minutes for long-running workflows)
+    if [ "$service_name" = "orchestrator" ]; then
+        DEPLOY_CMD="$DEPLOY_CMD --timeout=900"
+    fi
+    
+    DEPLOY_CMD="$DEPLOY_CMD --quiet"
+    eval $DEPLOY_CMD
     
     # Get service URL
     local url=$(gcloud run services describe ${cloud_run_name} \

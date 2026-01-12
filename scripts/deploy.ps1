@@ -135,19 +135,30 @@ function Deploy-Service {
     # Deploy to Cloud Run (replace underscores with dashes for valid service name)
     $cloudRunName = "moneymaker-$($ServiceName -replace '_', '-')"
     Write-Host "  Deploying to Cloud Run as $cloudRunName..." -ForegroundColor White
-    gcloud run deploy $cloudRunName `
-        --image=$imageName `
-        --region=$env:REGION `
-        --project=$env:PROJECT_ID `
-        --platform=managed `
-        --allow-unauthenticated `
-        --memory=512Mi `
-        --cpu=1 `
-        --min-instances=0 `
-        --max-instances=3 `
-        --set-env-vars="ENVIRONMENT=production,GCP_PROJECT_ID=$($env:PROJECT_ID),GCP_REGION=$($env:REGION)" `
-        --set-secrets="POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest" `
-        --quiet
+    
+    # Build deployment command
+    $deployArgs = @(
+        "run", "deploy", $cloudRunName,
+        "--image=$imageName",
+        "--region=$($env:REGION)",
+        "--project=$($env:PROJECT_ID)",
+        "--platform=managed",
+        "--allow-unauthenticated",
+        "--memory=512Mi",
+        "--cpu=1",
+        "--min-instances=0",
+        "--max-instances=3",
+        "--set-env-vars=ENVIRONMENT=production,GCP_PROJECT_ID=$($env:PROJECT_ID),GCP_REGION=$($env:REGION)",
+        "--set-secrets=POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest",
+        "--quiet"
+    )
+    
+    # Add timeout for orchestrator service (15 minutes for long-running workflows)
+    if ($ServiceName -eq "orchestrator") {
+        $deployArgs += "--timeout=900"
+    }
+    
+    gcloud @deployArgs
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  Failed to deploy to Cloud Run" -ForegroundColor Red
