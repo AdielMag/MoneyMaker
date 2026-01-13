@@ -1,0 +1,8 @@
+# Docker Compose override for debugging
+# Use with: docker compose -f docker-compose.yml -f docker-compose.debug.yml up
+
+services:
+  orchestrator:
+    environment:
+      - DEBUGPY_ENABLED=true
+      - DEBUGPY_WAIT_FOR_ATTACH=false  # Set to true to wait for debugger before starting

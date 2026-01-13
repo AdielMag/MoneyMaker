@@ -581,6 +581,236 @@
             color: var(--text-muted);
             font-size: 0.875rem;
         }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            flex: 1;
+            min-width: 200px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn:hover:not(:disabled) {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-dim);
+            transform: translateY(-2px);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .action-btn.loading {
+            pointer-events: none;
+        }
+
+        .action-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            animation: loading-shimmer 1.5s infinite;
+        }
+
+        @keyframes loading-shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .action-btn.discovery {
+            border-color: var(--accent-dim);
+        }
+
+        .action-btn.discovery:hover:not(:disabled) {
+            border-color: var(--accent);
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .action-btn.monitor {
+            border-color: var(--warning-dim);
+        }
+
+        .action-btn.monitor:hover:not(:disabled) {
+            border-color: var(--warning);
+            box-shadow: 0 4px 20px var(--warning-dim);
+        }
+
+        .action-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .action-btn.loading svg {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            animation: slideInRight 0.3s ease;
+            position: relative;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success {
+            border-color: var(--success);
+            background: var(--bg-card);
+        }
+
+        .toast.success::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--success);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+            background: var(--bg-card);
+        }
+
+        .toast.error::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--danger);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .toast.loading {
+            border-color: var(--accent);
+        }
+
+        .toast.loading::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--accent);
+            border-radius: 12px 0 0 12px;
+        }
+
+        .toast-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toast-icon .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            font-size: 0.9375rem;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .toast-message {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .toast-close {
+            flex-shrink: 0;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .toast-close:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .toast-details {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .toast-details strong {
+            color: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
@@ -598,6 +828,25 @@
                 <span id="statusText">Connecting...</span>
             </div>
         </header>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="action-btn discovery" id="discoveryBtn" onclick="triggerDiscovery()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                <span>Run Discovery (Fake)</span>
+            </button>
+            <button class="action-btn monitor" id="monitorBtn" onclick="triggerMonitor()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                </svg>
+                <span>Run Monitor (Fake)</span>
+            </button>
+        </div>
+
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
 
         <!-- Summary Cards -->
         <div class="summary-grid">
@@ -718,17 +967,12 @@
     </div>
 
     <script>
-        // Configuration
-        let ORCHESTRATOR_URL = '';
+        // Configuration - use relative URLs (dashboard backend will proxy to orchestrator)
+        const ORCHESTRATOR_URL = '';
         
         // Initialize
         async function init() {
             try {
-                // Get config from backend
-                const configRes = await fetch('/config');
-                const config = await configRes.json();
-                ORCHESTRATOR_URL = config.orchestrator_url;
-                
                 // Initial data load
                 await refreshData();
                 
@@ -839,10 +1083,11 @@
             }
         }
 
-        // Fetch data from orchestrator
+        // Fetch data from orchestrator (via dashboard proxy)
         async function fetchData(endpoint) {
             try {
-                const response = await fetch(`${ORCHESTRATOR_URL}${endpoint}`);
+                // Use relative URL - dashboard backend will proxy to orchestrator
+                const response = await fetch(endpoint);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 return await response.json();
             } catch (error) {
@@ -1048,6 +1293,157 @@
             if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
             if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
             return num.toString();
+        }
+
+        // Toast notification system
+        function showToast(type, title, message, details = null) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = '';
+            if (type === 'success') {
+                icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+            } else if (type === 'error') {
+                icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+            } else if (type === 'loading') {
+                icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="loading-spinner"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>';
+            }
+            
+            const detailsHtml = details ? `
+                <div class="toast-details">
+                    ${details}
+                </div>
+            ` : '';
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                    ${detailsHtml}
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto-remove after 5 seconds (unless it's a loading toast)
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.style.animation = 'slideInRight 0.3s ease reverse';
+                        setTimeout(() => toast.remove(), 300);
+                    }
+                }, 5000);
+            }
+            
+            return toast;
+        }
+
+        // Trigger discovery workflow
+        async function triggerDiscovery() {
+            const btn = document.getElementById('discoveryBtn');
+            btn.disabled = true;
+            btn.classList.add('loading');
+            
+            const loadingToast = showToast('loading', 'Running Discovery', 'Analyzing markets and generating AI suggestions...');
+            
+            try {
+                const response = await fetch(`${ORCHESTRATOR_URL}/workflow/discover`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ mode: 'fake' }),
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
+                    throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                loadingToast.remove();
+                
+                if (result.success) {
+                    const details = `
+                        <strong>Markets analyzed:</strong> ${result.markets_analyzed || 0}<br>
+                        <strong>Suggestions generated:</strong> ${result.suggestions_generated || 0}<br>
+                        <strong>Orders placed:</strong> ${result.orders_placed || 0}
+                    `;
+                    showToast('success', 'Discovery Complete', 'Successfully analyzed markets and generated suggestions.', details);
+                    
+                    // Refresh data after successful discovery
+                    setTimeout(() => refreshData(), 1000);
+                } else {
+                    const errorMsg = result.errors && result.errors.length > 0 
+                        ? result.errors.join(', ') 
+                        : 'Discovery completed with errors';
+                    showToast('error', 'Discovery Failed', errorMsg);
+                }
+            } catch (error) {
+                loadingToast.remove();
+                showToast('error', 'Discovery Error', error.message || 'Failed to trigger discovery workflow');
+                console.error('Discovery error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+            }
+        }
+
+        // Trigger monitor workflow
+        async function triggerMonitor() {
+            const btn = document.getElementById('monitorBtn');
+            btn.disabled = true;
+            btn.classList.add('loading');
+            
+            const loadingToast = showToast('loading', 'Running Monitor', 'Checking positions and executing sells...');
+            
+            try {
+                const response = await fetch(`${ORCHESTRATOR_URL}/workflow/monitor`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ mode: 'fake' }),
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
+                    throw new Error(errorData.detail || errorData.error || `HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                loadingToast.remove();
+                
+                if (result.success) {
+                    const details = `
+                        <strong>Positions checked:</strong> ${result.markets_analyzed || 0}<br>
+                        <strong>Sells triggered:</strong> ${result.orders_placed || 0}
+                    `;
+                    showToast('success', 'Monitor Complete', 'Successfully checked positions and executed sells.', details);
+                    
+                    // Refresh data after successful monitor
+                    setTimeout(() => refreshData(), 1000);
+                } else {
+                    const errorMsg = result.errors && result.errors.length > 0 
+                        ? result.errors.join(', ') 
+                        : 'Monitor completed with errors';
+                    showToast('error', 'Monitor Failed', errorMsg);
+                }
+            } catch (error) {
+                loadingToast.remove();
+                showToast('error', 'Monitor Error', error.message || 'Failed to trigger monitor workflow');
+                console.error('Monitor error:', error);
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+            }
         }
 
         // Start the app

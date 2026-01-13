@@ -1,0 +1,198 @@
+services:
+  orchestrator:
+    build:
+      context: .
+      dockerfile: services/orchestrator/Dockerfile
+    container_name: moneymaker-orchestrator
+    ports:
+      - "8000:8080"
+      - "5678:5678"  # Debug port
+    environment:
+      - PORT=8080
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      # GCP credentials - path to service account JSON file
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-credentials.json
+      - DEBUGPY_ENABLED=${DEBUGPY_ENABLED:-false}
+      - DEBUGPY_WAIT_FOR_ATTACH=${DEBUGPY_WAIT_FOR_ATTACH:-false}
+    env_file:
+      - .env
+    volumes:
+      - ./shared:/app/shared
+      - ./config:/app/config
+      - ./services:/app/services
+      - ./.cursor:/app/.cursor
+      # GCP credentials - required for Firestore (fake trading mode)
+      - ./gcp-credentials.json:/app/gcp-credentials.json:ro
+    networks:
+      - moneymaker-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: services/dashboard/Dockerfile
+    container_name: moneymaker-dashboard
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - ORCHESTRATOR_URL=http://orchestrator:8080
+    env_file:
+      - .env
+    volumes:
+      - ./shared:/app/shared
+      - ./config:/app/config
+      - ./services/dashboard:/app/services/dashboard
+    networks:
+      - moneymaker-network
+    restart: unless-stopped
+    depends_on:
+      - orchestrator
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  scraper:
+    build:
+      context: .
+      dockerfile: services/scraper/Dockerfile
+    container_name: moneymaker-scraper
+    ports:
+      - "8001:8080"
+    environment:
+      - PORT=8080
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      # GCP credentials - path to service account JSON file
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-credentials.json
+    env_file:
+      - .env
+    volumes:
+      - ./shared:/app/shared
+      - ./config:/app/config
+      - ./services/scraper:/app/services/scraper
+      - ./services/__init__.py:/app/services/__init__.py
+      # GCP credentials - required for Firestore (fake trading mode)
+      - ./gcp-credentials.json:/app/gcp-credentials.json:ro
+    networks:
+      - moneymaker-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  trader:
+    build:
+      context: .
+      dockerfile: services/trader/Dockerfile
+    container_name: moneymaker-trader
+    ports:
+      - "8002:8080"
+    environment:
+      - PORT=8080
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      # GCP credentials - path to service account JSON file
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-credentials.json
+    env_file:
+      - .env
+    volumes:
+      - ./shared:/app/shared
+      - ./config:/app/config
+      - ./services/trader:/app/services/trader
+      - ./services/__init__.py:/app/services/__init__.py
+      # GCP credentials - required for Firestore (fake trading mode)
+      - ./gcp-credentials.json:/app/gcp-credentials.json:ro
+    networks:
+      - moneymaker-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  monitor:
+    build:
+      context: .
+      dockerfile: services/monitor/Dockerfile
+    container_name: moneymaker-monitor
+    ports:
+      - "8003:8080"
+    environment:
+      - PORT=8080
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      # GCP credentials - path to service account JSON file
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-credentials.json
+    env_file:
+      - .env
+    volumes:
+      - ./shared:/app/shared
+      - ./config:/app/config
+      - ./services/monitor:/app/services/monitor
+      - ./services/trader:/app/services/trader
+      - ./services/__init__.py:/app/services/__init__.py
+      # GCP credentials - required for Firestore (fake trading mode)
+      - ./gcp-credentials.json:/app/gcp-credentials.json:ro
+    networks:
+      - moneymaker-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  ai_suggester:
+    build:
+      context: .
+      dockerfile: services/ai_suggester/Dockerfile
+    container_name: moneymaker-ai-suggester
+    ports:
+      - "8004:8080"
+    environment:
+      - PORT=8080
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      # GCP credentials - path to service account JSON file
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-credentials.json
+    env_file:
+      - .env
+    volumes:
+      - ./shared:/app/shared
+      - ./config:/app/config
+      - ./services/ai_suggester:/app/services/ai_suggester
+      - ./services/__init__.py:/app/services/__init__.py
+      # GCP credentials - required for Firestore (fake trading mode)
+      - ./gcp-credentials.json:/app/gcp-credentials.json:ro
+    networks:
+      - moneymaker-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  moneymaker-network:
+    driver: bridge

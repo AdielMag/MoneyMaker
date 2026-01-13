@@ -25,6 +25,7 @@
   <a href="#features">Features</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#quick-start">Quick Start</a> •
+  <a href="#running-locally-with-docker">Docker</a> •
   <a href="#configuration">Configuration</a> •
   <a href="#api-reference">API</a> •
   <a href="#deployment">Deployment</a>
@@ -38,15 +39,7 @@
 
 MoneyMaker is an automated trading system for [Polymarket](https://polymarket.com) prediction markets. It uses **Google Gemini AI** to analyze markets and identify profitable short-term trading opportunities.
 
-### Key Capabilities
-
-| Feature | Description |
-|---------|-------------|
-| 🔍 **Market Discovery** | Scrapes and filters live Polymarket markets based on configurable criteria |
-| 🤖 **AI Analysis** | Uses Gemini 1.5 Pro to identify markets with high profit potential |
-| 💵 **Dual Mode Trading** | Supports both real money and simulated (paper) trading |
-| 📊 **Position Monitoring** | Automatic stop-loss (-10%) and take-profit (+20%) order execution |
-| ⏰ **Scheduled Execution** | GCP Cloud Scheduler triggers workflows at configurable intervals |
+The system supports both **real money** and **simulated (paper) trading** modes, with automatic position monitoring, stop-loss, and take-profit execution. All services can run locally with Docker or be deployed to GCP Cloud Run.
 
 ---
 
@@ -58,7 +51,7 @@ MoneyMaker is an automated trading system for [Polymarket](https://polymarket.co
 - **Real Trading Mode** - Execute actual trades on Polymarket (when enabled)
 - **Risk Management** - Configurable stop-loss and take-profit thresholds
 - **RESTful API** - Query markets, positions, and trigger workflows on demand
-- **Microservices Architecture** - 6 independent services deployed on Cloud Run
+- **Microservices Architecture** - 6 independent services
 - **CI/CD Pipeline** - Automated testing and deployment via GitHub Actions
 
 ---
@@ -106,139 +99,257 @@ MoneyMaker is an automated trading system for [Polymarket](https://polymarket.co
 | **Monitor** | Position monitoring and automatic sell triggers |
 | **Dashboard** | Web UI for viewing fake trading data and metrics |
 
-> All services run on Cloud Run with port 8080 and auto-scale to zero when idle.
-
 ---
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.11+
-- GCP Account with billing enabled
-- Docker Desktop (for local builds)
-- Polymarket API credentials
-- Gemini API key
+- **Docker Desktop** (recommended) or **Python 3.11+**
+- **GCP Account** with billing enabled
+- **Polymarket API credentials**
+- **Gemini API key**
 
-### Installation
+### Recommended: Run with Docker
 
-**Windows (PowerShell):**
-```powershell
-# Clone the repository
-git clone https://github.com/AdielMag/MoneyMaker.git
-cd MoneyMaker
+The easiest way to run all services locally is using Docker Compose. See the [Running Locally with Docker](#running-locally-with-docker) section for complete setup instructions.
 
-# Create virtual environment
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt  # For development/testing
-
-# Copy environment template
-Copy-Item config\env.example .env
-# Edit .env with your credentials
-```
-
-**macOS/Linux:**
+**Quick Docker start:**
 ```bash
-# Clone the repository
+# 1. Clone and setup
 git clone https://github.com/AdielMag/MoneyMaker.git
 cd MoneyMaker
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt  # For development/testing
-
-# Copy environment template
 cp config/env.example .env
 # Edit .env with your credentials
+
+# 2. Add GCP credentials
+# Place your service account JSON as: gcp-credentials.json
+
+# 3. Start all services
+docker compose up -d
+
+# 4. Access services
+# Orchestrator API: http://localhost:8000/docs
+# Dashboard: http://localhost:8080
 ```
 
-### Run Tests
+### Alternative: Run Locally (Python)
 
 ```bash
-# Run all tests with coverage
+# Clone and setup
+git clone https://github.com/AdielMag/MoneyMaker.git
+cd MoneyMaker
+python -m venv venv
+source venv/bin/activate  # Windows: .\venv\Scripts\Activate.ps1
+
+# Install dependencies
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+
+# Configure
+cp config/env.example .env
+# Edit .env with your credentials
+
+# Run tests
 pytest
 
-# Run only unit tests
-pytest tests/unit -v
-
-# Run with coverage report
-pytest --cov --cov-report=html
-
-# Open coverage report
-open coverage_html/index.html  # macOS
-start coverage_html/index.html  # Windows
+# Start orchestrator
+uvicorn services.orchestrator.main:app --reload --port 8000
 ```
 
-### Local Development
+---
+
+## Running Locally with Docker
+
+Run all services locally using Docker Compose. All services will connect to Firestore and Polymarket APIs (external), but run in Docker containers on your local machine.
+
+### Prerequisites
+
+- **Docker Desktop** installed and running
+  - Ensure Docker is in your PATH (restart Docker Desktop if needed)
+  - Verify with: `docker --version`
+- **GCP Service Account JSON** file for Firestore authentication
+- **API Credentials** (Polymarket, Gemini)
+
+### Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/AdielMag/MoneyMaker.git
+   cd MoneyMaker
+   ```
+
+2. **Create environment file:**
+   ```bash
+   # Copy the example file
+   cp config/env.example .env
+   
+   # Edit .env with your credentials
+   # Required: GCP_PROJECT_ID, POLYMARKET_API_KEY, POLYMARKET_API_SECRET,
+   #           POLYMARKET_WALLET_ADDRESS, GEMINI_API_KEY
+   ```
+
+3. **Add GCP credentials:**
+   ```bash
+   # Place your GCP service account JSON file in the project root
+   # Name it: gcp-credentials.json
+   # 
+   # To create a service account key:
+   # gcloud iam service-accounts keys create gcp-credentials.json \
+   #   --iam-account=YOUR_SERVICE_ACCOUNT_EMAIL
+   ```
+
+4. **Start all services:**
+   ```bash
+   docker compose up -d
+   ```
+
+### Accessing Services
+
+Once started, services are available at:
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Orchestrator** | http://localhost:8000 | Main API (Swagger docs at `/docs`) |
+| **Dashboard** | http://localhost:8080 | Web UI dashboard |
+| **Scraper** | http://localhost:8001 | Scraper service API |
+| **Trader** | http://localhost:8002 | Trader service API |
+| **Monitor** | http://localhost:8003 | Monitor service API |
+| **AI Suggester** | http://localhost:8004 | AI Suggester service API |
+
+### Common Commands
 
 ```bash
-# Set environment variables
-export GCP_PROJECT_ID="your-project-id"  # Bash
-$env:GCP_PROJECT_ID = "your-project-id"  # PowerShell
+# Start all services
+docker compose up -d
 
-# Start the orchestrator service
-uvicorn services.orchestrator.main:app --reload --port 8000
+# View logs (all services)
+docker compose logs -f
 
-# Access API docs
-# Open http://localhost:8000/docs
+# View logs for specific service
+docker compose logs -f orchestrator
+
+# Stop all services
+docker compose down
+
+# Rebuild and restart (after code changes)
+docker compose up -d --build
+
+# Restart a specific service
+docker compose restart orchestrator
+
+# Check service status
+docker compose ps
 ```
+
+> **Note:** If you're using Docker Desktop, use `docker compose` (with space). For older standalone installations, use `docker-compose` (with hyphen).
+
+### Debugging with VS Code/Cursor
+
+You can debug the services running in Docker containers directly from your IDE:
+
+1. **Enable debug mode** by setting environment variables in `.env`:
+   ```bash
+   DEBUGPY_ENABLED=true
+   DEBUGPY_WAIT_FOR_ATTACH=false  # Set to true to wait for debugger before starting
+   ```
+
+2. **Restart the orchestrator service** with debug enabled:
+   ```bash
+   docker compose restart orchestrator
+   ```
+
+3. **Attach debugger** in VS Code/Cursor:
+   - Open the Run and Debug panel (F5)
+   - Select "Python: Attach to Orchestrator (Docker)"
+   - Click the play button or press F5
+   - Set breakpoints in your code and they'll be hit!
+
+**Alternative:** Use the debug override file:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.debug.yml up -d
+```
+
+**Note:** The debug port (5678) is already exposed in `docker-compose.yml`. Code changes are reflected immediately via volume mounts, so you can set breakpoints and debug live code.
+
+### Troubleshooting
+
+**Services won't start:**
+- Check that Docker Desktop is running
+- Verify `.env` file exists and has all required variables
+- Ensure `gcp-credentials.json` exists in project root
+- Check logs: `docker compose logs <service-name>`
+
+**Connection errors to Firestore:**
+- Verify `GCP_PROJECT_ID` in `.env` matches your GCP project
+- Ensure `gcp-credentials.json` has proper permissions
+- Check that Firestore API is enabled in your GCP project
+
+**Dashboard can't connect to Orchestrator:**
+- Ensure orchestrator service is running: `docker compose ps`
+- Check orchestrator logs: `docker compose logs orchestrator`
+- Verify network connectivity: `docker compose exec dashboard ping orchestrator`
+
+**Port already in use:**
+- Stop conflicting services on ports 8000-8004, 8080
+- Or modify port mappings in `docker-compose.yml`
+
+**Code changes not reflecting:**
+- Volumes are mounted, so code changes should be immediate
+- If not, restart the service: `docker compose restart <service-name>`
+- For dependency changes, rebuild: `docker compose up -d --build <service-name>`
+
+**`docker` command not found:**
+- Docker Desktop may not be in your PATH. Add it temporarily:
+  ```powershell
+  $env:PATH += ";C:\Program Files\Docker\Docker\resources\bin"
+  ```
+- To make it permanent, add Docker to your system PATH:
+  1. Open System Properties → Environment Variables
+  2. Edit "Path" under "User variables" or "System variables"
+  3. Add: `C:\Program Files\Docker\Docker\resources\bin`
+  4. Restart PowerShell
+- Or restart Docker Desktop, which usually adds itself to PATH
+
+**`docker-compose` command not found:**
+- Docker Desktop uses `docker compose` (with space) instead of `docker-compose` (with hyphen)
+- Use `docker compose` for all commands, or create an alias: `Set-Alias docker-compose docker compose`
 
 ---
 
 ## Configuration
 
-### Environment Variables
+Configuration is managed through environment variables (`.env` file) and `config/config.yaml`. Environment variables take precedence over YAML values.
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GCP_PROJECT_ID` | Google Cloud project ID | Yes |
-| `POLYMARKET_API_KEY` | Polymarket API key | Yes |
-| `POLYMARKET_API_SECRET` | Polymarket API secret | Yes |
-| `POLYMARKET_WALLET_ADDRESS` | Your Polymarket wallet address | Yes |
-| `GEMINI_API_KEY` | Google Gemini API key | Yes |
-| `REAL_MONEY_ENABLED` | Enable real money trading | No (default: false) |
-| `FAKE_MONEY_ENABLED` | Enable paper trading | No (default: true) |
+### Required Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `GCP_PROJECT_ID` | Google Cloud project ID |
+| `POLYMARKET_API_KEY` | Polymarket API key |
+| `POLYMARKET_API_SECRET` | Polymarket API secret |
+| `POLYMARKET_WALLET_ADDRESS` | Your Polymarket wallet address |
+| `GEMINI_API_KEY` | Google Gemini API key |
+
+### Optional Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REAL_MONEY_ENABLED` | `false` | Enable real money trading |
+| `FAKE_MONEY_ENABLED` | `true` | Enable paper trading |
+| `MAX_BET_AMOUNT` | `20.0` | Maximum bet per trade |
+| `MAX_POSITIONS` | `5` | Maximum concurrent positions |
+| `STOP_LOSS_PERCENT` | `-10` | Stop-loss threshold (%) |
+| `TAKE_PROFIT_PERCENT` | `20` | Take-profit threshold (%) |
 
 ### config/config.yaml
 
-```yaml
-workflows:
-  real_money:
-    enabled: false                    # ⚠️ Keep false until ready!
-  fake_money:
-    enabled: true
-    initial_balance: 1000.0           # Starting paper money
+Main configuration file with trading parameters, market filters, and AI settings. See `config/config.yaml` for all available options. Key settings:
 
-trading:
-  max_bet_amount: 20.0                # Maximum per bet
-  max_positions: 5                    # Max concurrent positions
-  sell_thresholds:
-    stop_loss_percent: -10            # Sell if down 10%
-    take_profit_percent: 20           # Sell if up 20%
-
-market_filters:
-  min_volume: 500                     # Minimum trading volume
-  max_time_to_resolution_hours: 2     # Markets resolving within 2 hrs
-  min_liquidity: 500
-  excluded_categories:
-    - sports
-    - entertainment
-  min_price: 0.05                     # Skip < 5¢ prices
-  max_price: 0.95                     # Skip > 95¢ prices
-
-ai:
-  model: "gemini-1.5-pro"
-  max_suggestions: 3                  # Top 3 picks per run
-  confidence_threshold: 0.75          # Require 75%+ confidence
-```
+- **Workflows**: Enable/disable real or fake money trading
+- **Trading**: Bet amounts, position limits, stop-loss/take-profit thresholds
+- **Market Filters**: Volume, liquidity, time-to-resolution, excluded categories
+- **AI**: Model selection, confidence thresholds, max suggestions
 
 ---
 
@@ -257,13 +368,13 @@ ai:
 | `GET` | `/positions/{mode}` | Get open positions (fake/real) |
 | `GET` | `/balance/{mode}` | Get current balance (fake/real) |
 | `GET` | `/config` | Get system configuration |
-| `GET` | `/docs` | Interactive API documentation |
+| `GET` | `/docs` | Interactive API documentation (Swagger) |
 
 ### Dashboard
 
 The dashboard service provides a web interface for monitoring fake trading activity.
 
-**URL:** `https://YOUR-DASHBOARD-URL/`
+**URL:** http://localhost:8080 (when running locally with Docker)
 
 **Features:**
 - Real-time wallet balance display
@@ -275,33 +386,34 @@ The dashboard service provides a web interface for monitoring fake trading activ
 
 ### Example Requests
 
-**PowerShell:**
-```powershell
+**Examples:**
+
+```bash
 # Check system health
-Invoke-RestMethod "https://YOUR-ORCHESTRATOR-URL/health"
+curl http://localhost:8000/health
 
 # Trigger discovery workflow (fake money mode)
-Invoke-RestMethod -Method POST `
-  -Uri "https://YOUR-ORCHESTRATOR-URL/workflow/discover" `
-  -ContentType "application/json" `
-  -Body '{"mode": "fake"}'
-
-# Get fake money balance
-Invoke-RestMethod "https://YOUR-ORCHESTRATOR-URL/balance/fake"
-
-# Get open positions
-Invoke-RestMethod "https://YOUR-ORCHESTRATOR-URL/positions/fake"
-```
-
-**Bash/cURL:**
-```bash
-# Trigger discovery workflow
-curl -X POST https://YOUR-ORCHESTRATOR-URL/workflow/discover \
+curl -X POST http://localhost:8000/workflow/discover \
   -H "Content-Type: application/json" \
   -d '{"mode": "fake"}'
 
+# Get fake money balance
+curl http://localhost:8000/balance/fake
+
+# Get open positions
+curl http://localhost:8000/positions/fake
+
 # Get system status
-curl https://YOUR-ORCHESTRATOR-URL/status
+curl http://localhost:8000/status
+```
+
+**PowerShell:**
+```powershell
+# Trigger discovery workflow
+Invoke-RestMethod -Method POST `
+  -Uri "http://localhost:8000/workflow/discover" `
+  -ContentType "application/json" `
+  -Body '{"mode": "fake"}'
 ```
 
 ---
@@ -310,63 +422,63 @@ curl https://YOUR-ORCHESTRATOR-URL/status
 
 📖 **For detailed deployment instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
 
-### Quick Deploy (Windows PowerShell)
+> **Note:** For local development, use [Docker Compose](#running-locally-with-docker) instead of deploying to GCP.
 
+### Quick Deploy to GCP Cloud Run
+
+**Windows (PowerShell):**
 ```powershell
-# 1. Set environment variables
+# Set environment variables
 $env:PROJECT_ID = "your-gcp-project-id"
 $env:REGION = "us-central1"
 $env:GCP_PROJECT_ID = $env:PROJECT_ID
 
-# 2. Authenticate with GCP
+# Authenticate with GCP
 gcloud auth login
 gcloud config set project $env:PROJECT_ID
 
-# 3. Enable required APIs
-gcloud services enable run.googleapis.com
-gcloud services enable firestore.googleapis.com
-gcloud services enable secretmanager.googleapis.com
-gcloud services enable artifactregistry.googleapis.com
+# Enable required APIs
+gcloud services enable run.googleapis.com firestore.googleapis.com `
+  secretmanager.googleapis.com artifactregistry.googleapis.com
 
-# 4. Set up secrets (interactive prompts)
+# Set up secrets (interactive prompts)
 .\scripts\setup_secrets.ps1
 
-# 5. Create Firestore database
+# Create Firestore database
 gcloud firestore databases create --location=us-central1
 
-# 6. Initialize Firestore data
+# Initialize Firestore data
 python scripts/init_firestore.py
 
-# 7. Deploy all services
+# Deploy all services
 .\scripts\deploy.ps1 -Service all -Tag v1.0.0
 ```
 
-### Quick Deploy (macOS/Linux)
-
+**macOS/Linux:**
 ```bash
-# 1. Set environment variables
+# Set environment variables
 export PROJECT_ID="your-gcp-project-id"
 export REGION="us-central1"
 export GCP_PROJECT_ID="$PROJECT_ID"
 
-# 2. Authenticate with GCP
+# Authenticate with GCP
 gcloud auth login
 gcloud config set project $PROJECT_ID
 
-# 3. Enable required APIs
+# Enable required APIs
 gcloud services enable run.googleapis.com firestore.googleapis.com \
   secretmanager.googleapis.com artifactregistry.googleapis.com
 
-# 4. Set up secrets (interactive prompts)
+# Set up secrets (interactive prompts)
 ./scripts/setup_secrets.sh
 
-# 5. Create Firestore database
+# Create Firestore database
 gcloud firestore databases create --location=us-central1
 
-# 6. Initialize Firestore data
+# Initialize Firestore data
 python scripts/init_firestore.py
 
-# 7. Deploy all services
+# Deploy all services
 ./scripts/deploy.sh all v1.0.0
 ```
 
@@ -432,6 +544,7 @@ MoneyMaker/
 │   └── init_firestore.py # Database initialization
 ├── infra/                # Terraform infrastructure
 ├── docs/                 # Documentation
+├── docker-compose.yml    # Local Docker setup
 └── .github/workflows/    # CI/CD pipelines
 ```
 

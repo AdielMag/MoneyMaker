@@ -10,13 +10,24 @@ Provides async interface to Polymarket's CLOB API for:
 
 import hashlib
 import hmac
+import os
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
+
+def _get_debug_log_path() -> str:
+    """Get path to debug log file that works in both Docker and local."""
+    # Try .cursor/debug.log relative to project root
+    project_root = Path(__file__).parent.parent
+    cursor_log = project_root / ".cursor" / "debug.log"
+    # Ensure .cursor directory exists
+    cursor_log.parent.mkdir(exist_ok=True)
+    return str(cursor_log)
 
 from shared.config import Settings, get_settings
 from shared.models import (
@@ -237,19 +248,54 @@ class PolymarketClient:
             response = await self.client.get(url, params=params)
             response.raise_for_status()
             data = response.json()
+            # #region agent log
+            import json
+            try:
+                with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"polymarket_client.py:237","message":"API response received","data":{"url":url,"params":params,"response_type":type(data).__name__,"data_length":len(data) if isinstance(data,list) else "not_list","status_code":response.status_code},"timestamp":int(time.time()*1000)})+"\n")
+            except: pass
+            # #endregion
         except Exception as e:
             logger.error("get_markets_error", error=str(e))
+            # #region agent log
+            import json
+            try:
+                with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"polymarket_client.py:242","message":"API request failed","data":{"error":str(e),"url":url,"params":params},"timestamp":int(time.time()*1000)})+"\n")
+            except: pass
+            # #endregion
             raise PolymarketAPIError(f"Failed to get markets: {str(e)}")
 
         markets = []
+        parse_success = 0
+        parse_fail = 0
         for item in data:
             try:
                 market = self._parse_market(item)
                 if market:
                     markets.append(market)
+                    parse_success += 1
+                else:
+                    parse_fail += 1
             except Exception as e:
                 logger.warning("parse_market_error", market_id=item.get("id"), error=str(e))
+                parse_fail += 1
+                # #region agent log
+                import json
+                try:
+                    with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"polymarket_client.py:252","message":"Market parse failed","data":{"market_id":item.get("id","unknown"),"error":str(e)},"timestamp":int(time.time()*1000)})+"\n")
+                except: pass
+                # #endregion
                 continue
+
+        # #region agent log
+        import json
+        try:
+            with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"polymarket_client.py:254","message":"Market parsing complete","data":{"raw_items":len(data),"parsed_success":parse_success,"parsed_fail":parse_fail,"final_markets":len(markets)},"timestamp":int(time.time()*1000)})+"\n")
+        except: pass
+        # #endregion
 
         return markets
 

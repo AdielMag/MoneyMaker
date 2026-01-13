@@ -5,9 +5,17 @@ Coordinates all trading workflows and provides unified API.
 """
 
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import structlog
+
+def _get_debug_log_path() -> str:
+    """Get path to debug log file that works in both Docker and local."""
+    project_root = Path(__file__).parent.parent.parent
+    cursor_log = project_root / ".cursor" / "debug.log"
+    cursor_log.parent.mkdir(exist_ok=True)
+    return str(cursor_log)
 
 from services.ai_suggester.service import AISuggesterService, get_ai_suggester_service
 from services.monitor.service import MonitorService, get_monitor_service
@@ -210,11 +218,30 @@ class OrchestratorService:
         filtered: bool = True,
     ) -> list[dict[str, Any]]:
         """Get available markets."""
+        # #region agent log
+        import json, time
+        try:
+            with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"orchestrator/service.py:207","message":"orchestrator get_markets entry","data":{"limit":limit,"filtered":filtered},"timestamp":int(time.time()*1000)})+"\n")
+        except: pass
+        # #endregion
+
         if filtered:
             markets, _ = await self.scraper.get_filtered_markets(limit=limit)
         else:
             markets = await self.scraper.get_markets(limit=limit)
-        return [m.model_dump() for m in markets]
+
+        result = [m.model_dump() for m in markets]
+
+        # #region agent log
+        import json, time
+        try:
+            with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"orchestrator/service.py:217","message":"orchestrator get_markets exit","data":{"returned_count":len(result)},"timestamp":int(time.time()*1000)})+"\n")
+        except: pass
+        # #endregion
+
+        return result
 
     async def get_system_status(self) -> dict[str, Any]:
         """Get overall system status."""

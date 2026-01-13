@@ -26,3 +26,6 @@ types-requests>=2.31.0
 
 # Pre-commit hooks
 pre-commit>=3.6.0
+
+# Debugging
+debugpy>=1.8.0

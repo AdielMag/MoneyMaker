@@ -5,12 +5,20 @@ Applies configurable filters to markets to identify tradeable opportunities.
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import structlog
 
 from shared.config import Settings, get_settings
 from shared.models import Market
+
+def _get_debug_log_path() -> str:
+    """Get path to debug log file that works in both Docker and local."""
+    project_root = Path(__file__).parent.parent.parent
+    cursor_log = project_root / ".cursor" / "debug.log"
+    cursor_log.parent.mkdir(exist_ok=True)
+    return str(cursor_log)
 
 logger = structlog.get_logger(__name__)
 
@@ -61,34 +69,79 @@ class MarketFilter:
         Returns:
             FilterResult indicating pass/fail and reason
         """
+        # #region agent log
+        import json, time
+        try:
+            with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:62","message":"filter_market entry","data":{"market_id":market.id[:30] if market.id else "unknown","volume":market.volume,"liquidity":market.liquidity,"category":market.category,"outcomes_count":len(market.outcomes) if market.outcomes else 0},"timestamp":int(time.time()*1000)})+"\n")
+        except: pass
+        # #endregion
+
         # Check time to resolution
         time_check = self._check_time_to_resolution(market)
         if not time_check.passed:
+            # #region agent log
+            try:
+                with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:74","message":"Time check failed","data":{"market_id":market.id[:30] if market.id else "unknown","reason":time_check.reason},"timestamp":int(time.time()*1000)})+"\n")
+            except: pass
+            # #endregion
             return time_check
 
         # Check volume
         volume_check = self._check_volume(market)
         if not volume_check.passed:
+            # #region agent log
+            try:
+                with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:79","message":"Volume check failed","data":{"market_id":market.id[:30] if market.id else "unknown","volume":market.volume,"min_volume":self.config.min_volume,"reason":volume_check.reason},"timestamp":int(time.time()*1000)})+"\n")
+            except: pass
+            # #endregion
             return volume_check
 
         # Check liquidity
         liquidity_check = self._check_liquidity(market)
         if not liquidity_check.passed:
+            # #region agent log
+            try:
+                with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:84","message":"Liquidity check failed","data":{"market_id":market.id[:30] if market.id else "unknown","liquidity":market.liquidity,"min_liquidity":self.config.min_liquidity,"reason":liquidity_check.reason},"timestamp":int(time.time()*1000)})+"\n")
+            except: pass
+            # #endregion
             return liquidity_check
 
         # Check category
         category_check = self._check_category(market)
         if not category_check.passed:
+            # #region agent log
+            try:
+                with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:89","message":"Category check failed","data":{"market_id":market.id[:30] if market.id else "unknown","category":market.category,"excluded":self.config.excluded_categories,"reason":category_check.reason},"timestamp":int(time.time()*1000)})+"\n")
+            except: pass
+            # #endregion
             return category_check
 
         # Check price range
         price_check = self._check_price_range(market)
         if not price_check.passed:
+            # #region agent log
+            try:
+                with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:94","message":"Price check failed","data":{"market_id":market.id[:30] if market.id else "unknown","outcomes":[{o.name:o.price for o in market.outcomes}],"min_price":self.config.min_price,"max_price":self.config.max_price,"reason":price_check.reason},"timestamp":int(time.time()*1000)})+"\n")
+            except: pass
+            # #endregion
             return price_check
 
         # All checks passed
         market.passes_filter = True
         market.filter_reason = None
+
+        # #region agent log
+        try:
+            with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:101","message":"All checks passed","data":{"market_id":market.id[:30] if market.id else "unknown"},"timestamp":int(time.time()*1000)})+"\n")
+        except: pass
+        # #endregion
 
         return FilterResult(passed=True, market=market)
 
@@ -104,6 +157,15 @@ class MarketFilter:
         """
         results = []
         passing = []
+        reason_counts = {}
+
+        # #region agent log
+        import json, time
+        try:
+            with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:95","message":"filter_markets entry","data":{"markets_count":len(markets),"config":{"min_volume":self.config.min_volume,"max_time_hours":self.config.max_time_to_resolution_hours,"min_liquidity":self.config.min_liquidity,"excluded_categories":self.config.excluded_categories}},"timestamp":int(time.time()*1000)})+"\n")
+        except: pass
+        # #endregion
 
         for market in markets:
             result = self.filter_market(market)
@@ -112,11 +174,22 @@ class MarketFilter:
             if result.passed:
                 passing.append(result.market)
             else:
+                reason = result.reason or "Unknown"
+                reason_key = reason.split("(")[0].strip()
+                reason_counts[reason_key] = reason_counts.get(reason_key, 0) + 1
                 logger.debug(
                     "market_filtered_out",
                     market_id=market.id,
                     reason=result.reason,
                 )
+
+        # #region agent log
+        import json, time
+        try:
+            with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:127","message":"filter_markets complete","data":{"total":len(markets),"passed":len(passing),"filtered_out":len(markets)-len(passing),"reason_counts":reason_counts},"timestamp":int(time.time()*1000)})+"\n")
+        except: pass
+        # #endregion
 
         logger.info(
             "markets_filtered",
@@ -131,6 +204,14 @@ class MarketFilter:
         """Check if market resolves within allowed timeframe."""
         time_to_resolution = market.compute_time_to_resolution()
         market.time_to_resolution_hours = time_to_resolution
+
+        # #region agent log
+        import json, time
+        try:
+            with open(_get_debug_log_path(), "a", encoding="utf-8") as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"scraper/filters.py:132","message":"Time check for market","data":{"market_id":market.id[:20] if market.id else "unknown","time_to_resolution":time_to_resolution,"end_date":str(market.end_date) if market.end_date else "none","max_hours":self.config.max_time_to_resolution_hours},"timestamp":int(time.time()*1000)})+"\n")
+        except: pass
+        # #endregion
 
         # Filter out markets that have already ended
         if time_to_resolution <= 0:
