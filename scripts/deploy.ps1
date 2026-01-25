@@ -136,6 +136,57 @@ function Deploy-Service {
     $cloudRunName = "moneymaker-$($ServiceName -replace '_', '-')"
     Write-Host "  Deploying to Cloud Run as $cloudRunName..." -ForegroundColor White
     
+    # Get service account email (create if needed)
+    $saName = "moneymaker-service"
+    $saEmail = "${saName}@$($env:PROJECT_ID).iam.gserviceaccount.com"
+
+    # Check if service account exists, create if not
+    $ErrorActionPreference = "SilentlyContinue"
+    $saExists = gcloud iam service-accounts describe $saEmail --project=$env:PROJECT_ID 2>&1
+    $ErrorActionPreference = "Stop"
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  Creating service account $saEmail..." -ForegroundColor Yellow
+        gcloud iam service-accounts create $saName `
+            --display-name="MoneyMaker Service Account" `
+            --project=$env:PROJECT_ID
+
+        # Grant necessary roles
+        Write-Host "  Granting IAM roles..." -ForegroundColor Yellow
+        gcloud projects add-iam-policy-binding $env:PROJECT_ID `
+            --member="serviceAccount:${saEmail}" `
+            --role="roles/datastore.user" `
+            --quiet
+
+        gcloud projects add-iam-policy-binding $env:PROJECT_ID `
+            --member="serviceAccount:${saEmail}" `
+            --role="roles/secretmanager.secretAccessor" `
+            --quiet
+
+        gcloud projects add-iam-policy-binding $env:PROJECT_ID `
+            --member="serviceAccount:${saEmail}" `
+            --role="roles/run.invoker" `
+            --quiet
+
+        gcloud projects add-iam-policy-binding $env:PROJECT_ID `
+            --member="serviceAccount:${saEmail}" `
+            --role="roles/logging.logWriter" `
+            --quiet
+
+        # Grant Secret Manager access at secret level (more explicit)
+        Write-Host "  Granting Secret Manager access to individual secrets..." -ForegroundColor Yellow
+        $secrets = @("polymarket-api-key", "polymarket-api-secret", "gemini-api-key")
+        foreach ($secretName in $secrets) {
+            $ErrorActionPreference = "SilentlyContinue"
+            gcloud secrets add-iam-policy-binding $secretName `
+                --member="serviceAccount:${saEmail}" `
+                --role="roles/secretmanager.secretAccessor" `
+                --project=$env:PROJECT_ID `
+                --quiet 2>&1 | Out-Null
+            $ErrorActionPreference = "Stop"
+        }
+    }
+
     # Build deployment command
     $deployArgs = @(
         "run", "deploy", $cloudRunName,
@@ -144,6 +195,7 @@ function Deploy-Service {
         "--project=$($env:PROJECT_ID)",
         "--platform=managed",
         "--allow-unauthenticated",
+        "--service-account=$saEmail",
         "--memory=512Mi",
         "--cpu=1",
         "--min-instances=0",
@@ -152,7 +204,7 @@ function Deploy-Service {
         "--set-secrets=POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest",
         "--quiet"
     )
-    
+
     # Add timeout for orchestrator service (15 minutes for long-running workflows)
     if ($ServiceName -eq "orchestrator") {
         $deployArgs += "--timeout=900"
