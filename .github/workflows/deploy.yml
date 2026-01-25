@@ -1,6 +1,12 @@
 name: Deploy
 
 on:
+  workflow_run:
+    workflows: ["Tests"]
+    types:
+      - completed
+    branches:
+      - main
   push:
     branches:
       - main
@@ -28,32 +34,75 @@ env:
   PYTHON_VERSION: "3.11"
 
 jobs:
+  check-tests:
+    name: Check Tests Passed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test workflow result
+        if: github.event_name == 'workflow_run'
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "❌ Tests workflow did not complete successfully. Deployment cancelled."
+            echo "Workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
+            exit 1
+          fi
+          echo "✅ Tests passed successfully. Proceeding with deployment."
+      
+      - name: Skip check (not workflow_run trigger)
+        if: github.event_name != 'workflow_run'
+        run: echo "Skipping check - tests will run in test job"
+
   test:
     name: Run Tests
     runs-on: ubuntu-latest
     
     steps:
+      - name: Skip tests (already ran in Tests workflow)
+        if: github.event_name == 'workflow_run'
+        run: |
+          echo "✅ Tests already passed in Tests workflow. Skipping local test run."
+          exit 0
+      
       - uses: actions/checkout@v4
+        if: github.event_name != 'workflow_run'
       
       - name: Set up Python
+        if: github.event_name != 'workflow_run'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
       - name: Install dependencies
+        if: github.event_name != 'workflow_run'
         run: |
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
       
-      - name: Run tests
+      - name: Run unit tests
+        if: github.event_name != 'workflow_run'
         run: pytest tests/unit -v --cov-fail-under=80
         env:
           ENVIRONMENT: test
+      
+      - name: Run E2E tests
+        if: github.event_name != 'workflow_run'
+        run: pytest tests/e2e -v -m e2e
+        env:
+          ENVIRONMENT: test
+          GCP_PROJECT_ID: test-project
+          POLYMARKET_API_KEY: test-key
+          POLYMARKET_API_SECRET: test-secret
+          GEMINI_API_KEY: test-gemini-key
 
   build-and-push:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
-    needs: test
+    needs: [check-tests, test]
+    # Only run if tests passed
+    # For workflow_run: both check-tests and test must succeed (test succeeds immediately)
+    # For other triggers: test job must succeed
+    if: |
+      needs.check-tests.result == 'success' && needs.test.result == 'success'
     
     strategy:
       matrix:
