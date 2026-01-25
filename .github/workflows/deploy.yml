@@ -39,53 +39,56 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check test workflow result
-        if: github.event_name == 'workflow_run'
         run: |
-          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
-            echo "❌ Tests workflow did not complete successfully. Deployment cancelled."
-            echo "Workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
-            exit 1
+          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+              echo "❌ Tests workflow did not complete successfully. Deployment cancelled."
+              echo "Workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
+              exit 1
+            fi
+            echo "✅ Tests passed successfully. Proceeding with deployment."
+          else
+            echo "✅ Skipping check - tests will run in test job"
           fi
-          echo "✅ Tests passed successfully. Proceeding with deployment."
-      
-      - name: Skip check (not workflow_run trigger)
-        if: github.event_name != 'workflow_run'
-        run: echo "Skipping check - tests will run in test job"
 
   test:
     name: Run Tests
     runs-on: ubuntu-latest
     
     steps:
-      - name: Skip tests (already ran in Tests workflow)
-        if: github.event_name == 'workflow_run'
+      - name: Determine test strategy
         run: |
-          echo "✅ Tests already passed in Tests workflow. Skipping local test run."
-          exit 0
+          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+            echo "✅ Tests already passed in Tests workflow. Skipping local test run."
+            echo "SKIP_TESTS=true" >> $GITHUB_ENV
+          else
+            echo "Running tests locally..."
+            echo "SKIP_TESTS=false" >> $GITHUB_ENV
+          fi
       
       - uses: actions/checkout@v4
-        if: github.event_name != 'workflow_run'
+        if: env.SKIP_TESTS != 'true'
       
       - name: Set up Python
-        if: github.event_name != 'workflow_run'
+        if: env.SKIP_TESTS != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
       - name: Install dependencies
-        if: github.event_name != 'workflow_run'
+        if: env.SKIP_TESTS != 'true'
         run: |
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
       
       - name: Run unit tests
-        if: github.event_name != 'workflow_run'
+        if: env.SKIP_TESTS != 'true'
         run: pytest tests/unit -v --cov-fail-under=80
         env:
           ENVIRONMENT: test
       
       - name: Run E2E tests
-        if: github.event_name != 'workflow_run'
+        if: env.SKIP_TESTS != 'true'
         run: pytest tests/e2e -v -m e2e
         env:
           ENVIRONMENT: test
@@ -98,11 +101,10 @@ jobs:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
     needs: [check-tests, test]
-    # Only run if tests passed
-    # For workflow_run: both check-tests and test must succeed (test succeeds immediately)
-    # For other triggers: test job must succeed
-    if: |
-      needs.check-tests.result == 'success' && needs.test.result == 'success'
+    # Only run if both jobs succeeded
+    # - check-tests succeeds if workflow_run tests passed OR if not workflow_run trigger
+    # - test succeeds if local tests passed OR if workflow_run trigger (skipped)
+    if: needs.check-tests.result == 'success' && needs.test.result == 'success'
     
     strategy:
       matrix:
