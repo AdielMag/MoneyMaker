@@ -68,7 +68,7 @@ class APIConfig(BaseSettings):
     port: int = 8000
     debug: bool = False
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])
-    
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Any) -> list[str]:
