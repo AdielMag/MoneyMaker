@@ -113,12 +113,20 @@ async def proxy_to_orchestrator(path: str, request: Request):
 
     # Determine timeout based on endpoint
     # Endpoints that might take longer (scraping, workflows) get extended timeout
-    slow_endpoints = ["markets", "workflow"]
-    is_slow_endpoint = any(slow in path.lower() for slow in slow_endpoints)
+    # Workflow endpoints can take up to 240s (4 minutes) according to orchestrator code
+    # Cloud Run orchestrator timeout is 900s (15 minutes), so we need enough time
+    is_workflow_endpoint = "workflow" in path.lower()
+    is_slow_endpoint = "markets" in path.lower()
 
-    # Use longer timeout for slow endpoints (60s) vs normal endpoints (30s)
-    # Cloud Run default timeout is 300s, so we have room
-    timeout_seconds = 60.0 if is_slow_endpoint else 30.0
+    # Use longer timeout for workflow endpoints (300s = 5 minutes) to allow for long-running operations
+    # Use medium timeout for slow endpoints like markets (60s)
+    # Use normal timeout for other endpoints (30s)
+    if is_workflow_endpoint:
+        timeout_seconds = 300.0  # 5 minutes for workflows
+    elif is_slow_endpoint:
+        timeout_seconds = 60.0  # 1 minute for slow endpoints
+    else:
+        timeout_seconds = 30.0  # 30 seconds for normal endpoints
 
     # Use httpx.Timeout with separate connect, read, write timeouts
     timeout = httpx.Timeout(
