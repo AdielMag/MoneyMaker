@@ -141,6 +141,7 @@ class TestDiscoveryWorkflowE2E:
         mock_firestore.update_wallet_balance = AsyncMock(return_value=mock_wallet)
         mock_firestore.create_transaction = AsyncMock()
         mock_firestore.create_position = AsyncMock()
+        mock_firestore.get_open_positions = AsyncMock(return_value=[])
         mock_firestore.get_workflow_state = AsyncMock(return_value=None)
         mock_firestore.update_workflow_state = AsyncMock()
 
@@ -190,6 +191,7 @@ class TestDiscoveryWorkflowE2E:
         mock_firestore = MagicMock()
         mock_firestore.get_or_create_wallet = AsyncMock(return_value=mock_wallet)
         mock_firestore.get_wallet = AsyncMock(return_value=mock_wallet)
+        mock_firestore.get_open_positions = AsyncMock(return_value=[])
 
         from services.trader.service import TraderService
 
@@ -223,6 +225,7 @@ class TestDiscoveryWorkflowE2E:
         mock_firestore = MagicMock()
         mock_firestore.get_or_create_wallet = AsyncMock(return_value=mock_wallet)
         mock_firestore.get_wallet = AsyncMock(return_value=mock_wallet)
+        mock_firestore.get_open_positions = AsyncMock(return_value=[])
 
         from services.scraper.service import ScraperService
         from services.trader.service import TraderService

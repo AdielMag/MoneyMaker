@@ -488,6 +488,13 @@ class FirestoreClient:
     # Helper Methods
     # =============================================================================
 
+    async def close(self) -> None:
+        """Close the Firestore client and clean up resources."""
+        if self._db is not None:
+            # Firestore AsyncClient doesn't have an explicit close method,
+            # but we can clear the reference
+            self._db = None
+
     def _parse_datetime(self, value: Any) -> datetime:
         """Parse datetime from various formats."""
         if value is None:
