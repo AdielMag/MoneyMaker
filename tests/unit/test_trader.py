@@ -49,6 +49,7 @@ def mock_firestore():
     client.create_transaction = AsyncMock()
     client.create_position = AsyncMock()
     client.delete_position = AsyncMock(return_value=True)
+    client.get_open_positions = AsyncMock(return_value=[])
 
     return client
 

@@ -209,6 +209,8 @@ class FirestoreClient:
             if not data:
                 return None
 
+            # Remove 'id' from data if present to avoid conflict
+            data.pop("id", None)
             return Position(
                 id=position_id,
                 **data,
@@ -238,6 +240,8 @@ class FirestoreClient:
             async for doc in query.stream():
                 data = doc.to_dict()
                 if data:
+                    # Remove 'id' from data if present to avoid conflict
+                    data.pop("id", None)
                     positions.append(
                         Position(
                             id=doc.id,
@@ -363,6 +367,8 @@ class FirestoreClient:
             async for doc in query.stream():
                 data = doc.to_dict()
                 if data:
+                    # Remove 'id' from data if present to avoid conflict
+                    data.pop("id", None)
                     transactions.append(
                         Transaction(
                             id=doc.id,
