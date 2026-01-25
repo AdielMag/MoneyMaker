@@ -4,9 +4,6 @@ Trader service implementation.
 Handles order execution for both real and fake trading modes.
 """
 
-from datetime import datetime
-from uuid import uuid4
-
 import structlog
 
 from shared.config import Settings, get_settings
@@ -20,42 +17,29 @@ from shared.models import (
     TradingMode,
     TransactionType,
 )
-from shared.polymarket_client import PolymarketAPIError, PolymarketClient
+from shared.polymarket_client import PolymarketClient
 
 logger = structlog.get_logger(__name__)
 
 
 class TraderService:
     """
-    Service for executing trades on Polymarket.
+    Service for executing trades.
 
-    Supports both real money (Polymarket API) and fake money (Firestore) modes.
+    Handles both real money (via Polymarket API) and fake money
+    (via Firestore) trading operations.
     """
 
     def __init__(
         self,
-        polymarket_client: PolymarketClient | None = None,
         firestore_client: FirestoreClient | None = None,
+        polymarket_client: PolymarketClient | None = None,
         settings: Settings | None = None,
     ):
-        """
-        Initialize trader service.
-
-        Args:
-            polymarket_client: Optional Polymarket client for real trades
-            firestore_client: Optional Firestore client for fake trades
-            settings: Optional Settings instance
-        """
+        """Initialize trader service."""
         self.settings = settings or get_settings()
-        self._polymarket_client = polymarket_client
         self._firestore_client = firestore_client
-
-    @property
-    def polymarket_client(self) -> PolymarketClient:
-        """Get or create Polymarket client."""
-        if self._polymarket_client is None:
-            self._polymarket_client = PolymarketClient(self.settings)
-        return self._polymarket_client
+        self._polymarket_client = polymarket_client
 
     @property
     def firestore_client(self) -> FirestoreClient:
@@ -64,26 +48,41 @@ class TraderService:
             self._firestore_client = get_firestore_client()
         return self._firestore_client
 
+    @property
+    def polymarket_client(self) -> PolymarketClient:
+        """Get or create Polymarket client."""
+        if self._polymarket_client is None:
+            from shared.polymarket_client import PolymarketClient
+
+            self._polymarket_client = PolymarketClient(self.settings)
+        return self._polymarket_client
+
     async def get_balance(self, mode: TradingMode) -> float:
         """
         Get current balance for trading mode.
 
         Args:
-            mode: Trading mode (real or fake)
+            mode: Trading mode
 
         Returns:
             Current balance in USDC
         """
         if mode == TradingMode.REAL:
+            # Get real balance from Polymarket
             async with self.polymarket_client as client:
                 return await client.get_balance()
         else:
-            wallet = await self.firestore_client.get_or_create_wallet()
+            # Get fake balance from Firestore
+            wallet = await self.firestore_client.get_or_create_wallet("default")
             return wallet.balance
 
-    async def can_trade(self, mode: TradingMode, amount: float) -> tuple[bool, str]:
+    async def can_trade(
+        self,
+        mode: TradingMode,
+        amount: float,
+    ) -> tuple[bool, str]:
         """
-        Check if trading is possible.
+        Check if trading is possible for given amount.
 
         Args:
             mode: Trading mode
@@ -95,7 +94,6 @@ class TraderService:
         # Check if mode is enabled
         if mode == TradingMode.REAL and not self.settings.real_money_enabled:
             return False, "Real money trading is disabled"
-
         if mode == TradingMode.FAKE and not self.settings.fake_money_enabled:
             return False, "Fake money trading is disabled"
 
@@ -104,10 +102,22 @@ class TraderService:
         min_balance = self.settings.trading.min_balance_to_trade
 
         if balance < min_balance:
-            return False, f"Balance ${balance:.2f} below minimum ${min_balance:.2f}"
+            return False, f"Balance ${balance:.2f} is below minimum ${min_balance:.2f}"
 
         if balance < amount:
             return False, f"Insufficient balance: ${balance:.2f} < ${amount:.2f}"
+
+        # Check max bet amount
+        max_bet = self.settings.trading.max_bet_amount
+        if amount > max_bet:
+            return False, f"Amount ${amount:.2f} exceeds max bet ${max_bet:.2f}"
+
+        # Check max positions (for fake mode)
+        if mode == TradingMode.FAKE:
+            positions = await self.firestore_client.get_open_positions(mode)
+            max_positions = self.settings.trading.max_positions
+            if len(positions) >= max_positions:
+                return False, f"Maximum positions ({max_positions}) reached"
 
         return True, "OK"
 
@@ -130,10 +140,8 @@ class TraderService:
             mode: Trading mode
 
         Returns:
-            Order object with status
+            Order object
         """
-        quantity = amount / price if price > 0 else 0
-
         logger.info(
             "placing_buy_order",
             market_id=market_id,
@@ -143,23 +151,100 @@ class TraderService:
             mode=mode.value,
         )
 
+        # Calculate quantity
+        quantity = amount / price if price > 0 else 0
+
         if mode == TradingMode.REAL:
-            return await self._place_real_order(
-                market_id=market_id,
-                outcome=outcome,
-                side=OrderSide.BUY,
-                price=price,
-                quantity=quantity,
-            )
+            # Place real order via Polymarket
+            async with self.polymarket_client as client:
+                order = await client.place_order(
+                    market_id=market_id,
+                    outcome=outcome,
+                    side=OrderSide.BUY,
+                    amount=amount,
+                    price=price,
+                )
+                return order
         else:
-            return await self._place_fake_order(
+            # Place fake order via Firestore
+            wallet = await self.firestore_client.get_or_create_wallet("default")
+            balance_before = wallet.balance
+
+            # Check if we can afford it
+            if not wallet.can_afford(amount):
+                order = Order(
+                    market_id=market_id,
+                    outcome=outcome,
+                    side=OrderSide.BUY,
+                    price=price,
+                    quantity=quantity,
+                    total_value=amount,
+                    status=OrderStatus.FAILED,
+                    mode=mode,
+                    error_message=f"Insufficient balance: ${wallet.balance:.2f} < ${amount:.2f}",
+                )
+                logger.warning("buy_order_failed", reason=order.error_message)
+                return order
+
+            # Deduct from wallet
+            if not wallet.deduct(amount):
+                order = Order(
+                    market_id=market_id,
+                    outcome=outcome,
+                    side=OrderSide.BUY,
+                    price=price,
+                    quantity=quantity,
+                    total_value=amount,
+                    status=OrderStatus.FAILED,
+                    mode=mode,
+                    error_message="Failed to deduct from wallet",
+                )
+                logger.warning("buy_order_failed", reason=order.error_message)
+                return order
+
+            # Update wallet in Firestore
+            await self.firestore_client.update_wallet_balance("default", wallet.balance)
+
+            # Create transaction
+            await self.firestore_client.create_transaction(
+                wallet_id="default",
+                tx_type=TransactionType.BUY,
+                amount=amount,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                reference_id=f"order-{market_id}",
+                description=f"Buy {outcome} on {market_id}",
+            )
+
+            # Create position
+            position = Position(
+                id="",
+                market_id=market_id,
+                outcome=outcome,
+                entry_price=price,
+                current_price=price,
+                quantity=quantity,
+                entry_value=amount,
+                current_value=amount,
+                mode=mode,
+            )
+            position = await self.firestore_client.create_position(position)
+
+            # Create order record
+            order = Order(
+                id=f"order-{position.id}",
                 market_id=market_id,
                 outcome=outcome,
                 side=OrderSide.BUY,
                 price=price,
                 quantity=quantity,
-                amount=amount,
+                total_value=amount,
+                status=OrderStatus.FILLED,
+                mode=mode,
             )
+
+            logger.info("buy_order_filled", order_id=order.id, position_id=position.id)
+            return order
 
     async def place_sell_order(
         self,
@@ -171,10 +256,10 @@ class TraderService:
 
         Args:
             position: Position to close
-            price: Optional limit price (uses current if None)
+            price: Sell price (uses current price if not provided)
 
         Returns:
-            Order object with status
+            Order object
         """
         if price is None:
             price = position.current_price
@@ -183,189 +268,63 @@ class TraderService:
             "placing_sell_order",
             position_id=position.id,
             market_id=position.market_id,
-            outcome=position.outcome,
-            quantity=position.quantity,
-            mode=position.mode.value,
+            price=price,
         )
 
+        # Calculate proceeds
+        proceeds = price * position.quantity
+
         if position.mode == TradingMode.REAL:
-            return await self._place_real_order(
+            # Place real sell order via Polymarket
+            async with self.polymarket_client as client:
+                order = await client.place_order(
+                    market_id=position.market_id,
+                    outcome=position.outcome,
+                    side=OrderSide.SELL,
+                    amount=proceeds,
+                    price=price,
+                )
+                return order
+        else:
+            # Place fake sell order via Firestore
+            wallet = await self.firestore_client.get_or_create_wallet("default")
+            balance_before = wallet.balance
+
+            # Add proceeds to wallet
+            wallet.add(proceeds)
+
+            # Update wallet in Firestore
+            await self.firestore_client.update_wallet_balance("default", wallet.balance)
+
+            # Create transaction
+            await self.firestore_client.create_transaction(
+                wallet_id="default",
+                tx_type=TransactionType.SELL,
+                amount=proceeds,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                reference_id=position.id,
+                description=f"Sell {position.outcome} on {position.market_id}",
+            )
+
+            # Delete position
+            await self.firestore_client.delete_position(position.id)
+
+            # Create order record
+            order = Order(
+                id=f"order-sell-{position.id}",
                 market_id=position.market_id,
                 outcome=position.outcome,
                 side=OrderSide.SELL,
                 price=price,
                 quantity=position.quantity,
+                total_value=proceeds,
+                status=OrderStatus.FILLED,
+                mode=position.mode,
             )
-        else:
-            return await self._close_fake_position(position, price)
 
-    async def _place_real_order(  # pragma: no cover
-        self,
-        market_id: str,
-        outcome: str,
-        side: OrderSide,
-        price: float,
-        quantity: float,
-    ) -> Order:
-        """Place a real order on Polymarket."""
-        try:
-            async with self.polymarket_client as client:
-                order = await client.place_order(
-                    market_id=market_id,
-                    outcome=outcome,
-                    side=side,
-                    price=price,
-                    quantity=quantity,
-                )
-
-            logger.info(
-                "real_order_placed",
-                order_id=order.id,
-                status=order.status.value,
-            )
+            logger.info("sell_order_filled", order_id=order.id, position_id=position.id)
             return order
-
-        except PolymarketAPIError as e:
-            logger.error("real_order_failed", error=str(e))
-            return Order(
-                market_id=market_id,
-                outcome=outcome,
-                side=side,
-                price=price,
-                quantity=quantity,
-                total_value=price * quantity,
-                status=OrderStatus.FAILED,
-                mode=TradingMode.REAL,
-                error_message=str(e),
-            )
-
-    async def _place_fake_order(
-        self,
-        market_id: str,
-        outcome: str,
-        side: OrderSide,
-        price: float,
-        quantity: float,
-        amount: float,
-    ) -> Order:
-        """Place a fake order in Firestore."""
-        order_id = str(uuid4())
-
-        # Get wallet and check balance
-        wallet = await self.firestore_client.get_or_create_wallet()
-
-        if not wallet.can_afford(amount):
-            return Order(
-                id=order_id,
-                market_id=market_id,
-                outcome=outcome,
-                side=side,
-                price=price,
-                quantity=quantity,
-                total_value=amount,
-                status=OrderStatus.FAILED,
-                mode=TradingMode.FAKE,
-                error_message="Insufficient balance",
-            )
-
-        # Deduct from wallet
-        balance_before = wallet.balance
-        wallet.deduct(amount)
-        await self.firestore_client.update_wallet_balance(wallet.wallet_id, wallet.balance)
-
-        # Record transaction
-        await self.firestore_client.create_transaction(
-            wallet_id=wallet.wallet_id,
-            tx_type=TransactionType.BUY,
-            amount=amount,
-            balance_before=balance_before,
-            balance_after=wallet.balance,
-            reference_id=order_id,
-            description=f"Buy {outcome} on {market_id}",
-        )
-
-        # Create position
-        position = Position(
-            id=str(uuid4()),
-            market_id=market_id,
-            outcome=outcome,
-            entry_price=price,
-            current_price=price,
-            quantity=quantity,
-            entry_value=amount,
-            current_value=amount,
-            mode=TradingMode.FAKE,
-        )
-        await self.firestore_client.create_position(position)
-
-        order = Order(
-            id=order_id,
-            market_id=market_id,
-            outcome=outcome,
-            side=side,
-            price=price,
-            quantity=quantity,
-            total_value=amount,
-            status=OrderStatus.FILLED,
-            mode=TradingMode.FAKE,
-            filled_at=datetime.utcnow(),
-        )
-
-        logger.info(
-            "fake_order_placed",
-            order_id=order_id,
-            position_id=position.id,
-            amount=amount,
-        )
-
-        return order
-
-    async def _close_fake_position(self, position: Position, price: float) -> Order:
-        """Close a fake position."""
-        order_id = str(uuid4())
-        sale_value = price * position.quantity
-
-        # Get wallet and add proceeds
-        wallet = await self.firestore_client.get_or_create_wallet()
-        balance_before = wallet.balance
-        wallet.add(sale_value)
-        await self.firestore_client.update_wallet_balance(wallet.wallet_id, wallet.balance)
-
-        # Record transaction
-        await self.firestore_client.create_transaction(
-            wallet_id=wallet.wallet_id,
-            tx_type=TransactionType.SELL,
-            amount=sale_value,
-            balance_before=balance_before,
-            balance_after=wallet.balance,
-            reference_id=position.id,
-            description=f"Sell {position.outcome} on {position.market_id}",
-        )
-
-        # Delete position
-        await self.firestore_client.delete_position(position.id)
-
-        order = Order(
-            id=order_id,
-            market_id=position.market_id,
-            outcome=position.outcome,
-            side=OrderSide.SELL,
-            price=price,
-            quantity=position.quantity,
-            total_value=sale_value,
-            status=OrderStatus.FILLED,
-            mode=TradingMode.FAKE,
-            filled_at=datetime.utcnow(),
-        )
-
-        logger.info(
-            "fake_position_closed",
-            order_id=order_id,
-            position_id=position.id,
-            pnl=sale_value - position.entry_value,
-        )
-
-        return order
 
     async def execute_suggestion(
         self,
@@ -377,22 +336,31 @@ class TraderService:
         Execute a trade based on AI suggestion.
 
         Args:
-            suggestion: AI suggestion to execute
+            suggestion: AI suggestion
             position_size: Amount to trade
             mode: Trading mode
 
         Returns:
-            Order object with status
+            Order object
         """
-        # Estimate price from suggestion
-        # In real implementation, would fetch current market price
-        estimated_price = 0.5  # Placeholder
+        logger.info(
+            "executing_suggestion",
+            market_id=suggestion.market_id,
+            outcome=suggestion.recommended_outcome,
+            position_size=position_size,
+            mode=mode.value,
+        )
+
+        # Use suggested price or fetch current market price
+        # For now, use a default price based on confidence
+        # In production, would fetch from market data
+        price = 0.5  # Default price, should be fetched from market
 
         return await self.place_buy_order(
             market_id=suggestion.market_id,
             outcome=suggestion.recommended_outcome,
             amount=position_size,
-            price=estimated_price,
+            price=price,
             mode=mode,
         )
 
