@@ -60,14 +60,6 @@ async def health():
     }
 
 
-@app.get("/config")
-async def get_config():
-    """Return configuration for the frontend."""
-    return JSONResponse({
-        "orchestrator_url": ORCHESTRATOR_URL,
-    })
-
-
 # Serve static files
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
@@ -107,7 +99,7 @@ if __name__ == "__main__":
 async def proxy_to_orchestrator(path: str, request: Request):
     """Proxy requests to the orchestrator service."""
     # Skip proxy for dashboard-specific routes - these should be handled by other routes above
-    excluded_paths = ["", "health", "config"]
+    excluded_paths = ["", "health"]
     if path in excluded_paths or path.startswith("static/"):
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Not found")
