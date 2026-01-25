@@ -8,7 +8,6 @@ from typing import Any
 
 import structlog
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from services.ai_suggester.service import AISuggesterService, get_ai_suggester_service
@@ -24,15 +23,8 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Add CORS middleware
+# CORS removed - requests come through dashboard proxy (server-to-server, no CORS needed)
 settings = get_settings()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.api.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Service instance
 _ai_service: AISuggesterService | None = None

@@ -33,6 +33,7 @@ app = FastAPI(
 )
 
 # CORS removed - requests come through dashboard proxy (server-to-server, no CORS needed)
+settings = get_settings()
 
 # Service instance
 _orchestrator: OrchestratorService | None = None
