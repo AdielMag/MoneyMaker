@@ -35,9 +35,16 @@ app = FastAPI(
 
 # Add CORS middleware
 settings = get_settings()
+# Ensure CORS origins is a list and not empty
+cors_origins = settings.api.cors_origins
+if not cors_origins or (isinstance(cors_origins, list) and len(cors_origins) == 0):
+    cors_origins = ["*"]  # Fallback to allow all origins
+elif isinstance(cors_origins, str):
+    cors_origins = [cors_origins]  # Convert single string to list
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.api.cors_origins,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

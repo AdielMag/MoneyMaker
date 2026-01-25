@@ -68,6 +68,27 @@ class APIConfig(BaseSettings):
     port: int = 8000
     debug: bool = False
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])
+    
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        """Parse CORS origins from various formats."""
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            # Try to parse as JSON first
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, TypeError):
+                pass
+            # If it's a comma-separated string, split it
+            if "," in v:
+                return [origin.strip() for origin in v.split(",")]
+            # Otherwise, treat as single origin
+            return [v]
+        return ["*"]
 
 
 class LoggingConfig(BaseSettings):
