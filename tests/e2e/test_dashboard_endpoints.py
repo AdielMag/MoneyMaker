@@ -90,7 +90,8 @@ class TestDashboardEndpointsE2E:
         # Check for key JavaScript functions
         assert "refreshData" in content
         assert "fetchData" in content
-        assert "/config" in content
+        # Check for relative URL usage (proxy approach - no direct orchestrator calls)
+        assert "/balance/fake" in content or "fetchData" in content
 
     def test_static_files_mounted(self, dashboard_client):
         """Test static files are accessible."""

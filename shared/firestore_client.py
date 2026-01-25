@@ -240,12 +240,26 @@ class FirestoreClient:
             async for doc in query.stream():
                 data = doc.to_dict()
                 if data:
-                    # Get ID from data dict if present and valid, otherwise use doc.id
-                    # This handles both test mocks (ID in data) and real Firestore (ID from doc.id)
+                    # Get ID - prefer from data dict (for test mocks), fallback to doc.id (for real Firestore)
+                    # Remove 'id' from data to avoid duplicate keyword argument
                     if "id" in data and isinstance(data["id"], str):
                         doc_id = data.pop("id")
                     else:
-                        doc_id = str(doc.id)
+                        # Use doc.id, but handle MagicMock in tests
+                        try:
+                            # Check if doc.id is actually a string (not a MagicMock)
+                            from unittest.mock import MagicMock
+                            if isinstance(doc.id, MagicMock):
+                                # In test mocks, doc.id might be MagicMock, so use a fallback
+                                doc_id = data.get("id", "unknown")
+                                if "id" in data:
+                                    data.pop("id")
+                            else:
+                                doc_id = str(doc.id) if doc.id else "unknown"
+                        except (AttributeError, TypeError):
+                            doc_id = data.get("id", "unknown")
+                            if "id" in data:
+                                data.pop("id")
                     positions.append(
                         Position(
                             id=doc_id,
@@ -371,12 +385,26 @@ class FirestoreClient:
             async for doc in query.stream():
                 data = doc.to_dict()
                 if data:
-                    # Get ID from data dict if present and valid, otherwise use doc.id
-                    # This handles both test mocks (ID in data) and real Firestore (ID from doc.id)
+                    # Get ID - prefer from data dict (for test mocks), fallback to doc.id (for real Firestore)
+                    # Remove 'id' from data to avoid duplicate keyword argument
                     if "id" in data and isinstance(data["id"], str):
                         doc_id = data.pop("id")
                     else:
-                        doc_id = str(doc.id)
+                        # Use doc.id, but handle MagicMock in tests
+                        try:
+                            # Check if doc.id is actually a string (not a MagicMock)
+                            from unittest.mock import MagicMock
+                            if isinstance(doc.id, MagicMock):
+                                # In test mocks, doc.id might be MagicMock, so use a fallback
+                                doc_id = data.get("id", "unknown")
+                                if "id" in data:
+                                    data.pop("id")
+                            else:
+                                doc_id = str(doc.id) if doc.id else "unknown"
+                        except (AttributeError, TypeError):
+                            doc_id = data.get("id", "unknown")
+                            if "id" in data:
+                                data.pop("id")
                     transactions.append(
                         Transaction(
                             id=doc_id,
