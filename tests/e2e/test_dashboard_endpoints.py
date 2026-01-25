@@ -2,9 +2,6 @@
 End-to-end tests for the Dashboard service FastAPI endpoints.
 """
 
-import os
-from unittest.mock import patch
-
 import pytest
 from fastapi.testclient import TestClient
 
