@@ -187,6 +187,14 @@ jobs:
       - name: Deploy to Cloud Run
         if: github.event.inputs.service == 'all' || github.event.inputs.service == matrix.service || github.event_name == 'push'
         run: |
+          # Build base environment variables
+          ENV_VARS="ENVIRONMENT=production,GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCP_REGION=${{ env.REGION }}"
+          
+          # Add CORS origins for orchestrator service (needed for browser requests)
+          if [ "${{ matrix.service }}" = "orchestrator" ]; then
+            ENV_VARS="$ENV_VARS,API__CORS_ORIGINS=[\\\"*\\\"]"
+          fi
+          
           DEPLOY_CMD="gcloud run deploy ${{ steps.service_name.outputs.name }} \
             --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/moneymaker/${{ matrix.service }}:${{ steps.version.outputs.tag }} \
             --region ${{ env.REGION }} \
@@ -196,7 +204,7 @@ jobs:
             --cpu 1 \
             --min-instances 0 \
             --max-instances 3 \
-            --set-env-vars \"ENVIRONMENT=production,GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCP_REGION=${{ env.REGION }},API__CORS_ORIGINS=[\\\"*\\\"]\" \
+            --set-env-vars \"$ENV_VARS\" \
             --set-secrets \"POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest\""
           
           # Add timeout for orchestrator service (15 minutes for long-running workflows)
