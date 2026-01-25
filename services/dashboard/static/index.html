@@ -967,17 +967,9 @@
     </div>
 
     <script>
-        // Configuration
-        let ORCHESTRATOR_URL = '';
-        
         // Initialize
         async function init() {
             try {
-                // Get config from backend
-                const configRes = await fetch('/config');
-                const config = await configRes.json();
-                ORCHESTRATOR_URL = config.orchestrator_url;
-                
                 // Initial data load
                 await refreshData();
                 
@@ -1091,7 +1083,7 @@
         // Fetch data from orchestrator
         async function fetchData(endpoint) {
             try {
-                const response = await fetch(`${ORCHESTRATOR_URL}${endpoint}`);
+                const response = await fetch(endpoint);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 return await response.json();
             } catch (error) {
@@ -1358,7 +1350,7 @@
             const loadingToast = showToast('loading', 'Running Discovery', 'Analyzing markets and generating AI suggestions...');
             
             try {
-                const response = await fetch(`${ORCHESTRATOR_URL}/workflow/discover`, {
+                const response = await fetch(`/workflow/discover`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1409,7 +1401,7 @@
             const loadingToast = showToast('loading', 'Running Monitor', 'Checking positions and executing sells...');
             
             try {
-                const response = await fetch(`${ORCHESTRATOR_URL}/workflow/monitor`, {
+                const response = await fetch(`/workflow/monitor`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

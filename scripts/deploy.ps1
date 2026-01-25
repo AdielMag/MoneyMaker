@@ -200,7 +200,7 @@ function Deploy-Service {
         "--cpu=1",
         "--min-instances=0",
         "--max-instances=3",
-        "--set-env-vars=ENVIRONMENT=production,GCP_PROJECT_ID=$($env:PROJECT_ID),GCP_REGION=$($env:REGION),API__CORS_ORIGINS=[`"*`"]",
+        "--set-env-vars=ENVIRONMENT=production,GCP_PROJECT_ID=$($env:PROJECT_ID),GCP_REGION=$($env:REGION)",
         "--set-secrets=POLYMARKET_API_KEY=polymarket-api-key:latest,POLYMARKET_API_SECRET=polymarket-api-secret:latest,GEMINI_API_KEY=gemini-api-key:latest",
         "--quiet"
     )

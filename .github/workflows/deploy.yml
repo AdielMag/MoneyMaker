@@ -188,11 +188,6 @@ jobs:
           # Build base environment variables
           ENV_VARS="ENVIRONMENT=production,GCP_PROJECT_ID=${{ env.PROJECT_ID }},GCP_REGION=${{ env.REGION }}"
           
-          # Add CORS origins for orchestrator service (needed for browser requests)
-          if [ "${{ matrix.service }}" = "orchestrator" ]; then
-            ENV_VARS="$ENV_VARS,API__CORS_ORIGINS=[\\\"*\\\"]"
-          fi
-          
           DEPLOY_CMD="gcloud run deploy ${{ steps.service_name.outputs.name }} \
             --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/moneymaker/${{ matrix.service }}:${{ steps.version.outputs.tag }} \
             --region ${{ env.REGION }} \
