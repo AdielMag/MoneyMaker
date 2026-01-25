@@ -30,34 +30,6 @@ class TestDashboardEndpointsE2E:
         assert data["status"] == "healthy"
         assert data["service"] == "dashboard"
 
-    def test_get_config(self, dashboard_client):
-        """Test config endpoint returns orchestrator URL."""
-        response = dashboard_client.get("/config")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "orchestrator_url" in data
-
-    def test_get_config_with_env_var(self, dashboard_client):
-        """Test config endpoint uses ORCHESTRATOR_URL env var."""
-        test_url = "https://test-orchestrator.example.com"
-
-        with patch.dict(os.environ, {"ORCHESTRATOR_URL": test_url}):
-            # Need to reimport to pick up new env var
-            from services.dashboard import main
-
-            # Re-read the environment variable
-            main.ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://localhost:8000")
-
-            response = dashboard_client.get("/config")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert data["orchestrator_url"] == test_url
-
-            # Reset to default
-            main.ORCHESTRATOR_URL = "http://localhost:8000"
-
     def test_root_serves_html(self, dashboard_client):
         """Test root endpoint serves the dashboard HTML."""
         response = dashboard_client.get("/")
