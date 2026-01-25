@@ -5,6 +5,7 @@ Main entry point for the MoneyMaker trading system.
 Provides unified API for all trading operations.
 """
 
+import asyncio
 from typing import Any
 
 import structlog
@@ -100,7 +101,17 @@ async def system_status() -> dict[str, Any]:
     service = get_service()
 
     try:
-        return await service.get_system_status()
+        # Set timeout to 30 seconds for status check
+        return await asyncio.wait_for(
+            service.get_system_status(),
+            timeout=30.0
+        )
+    except asyncio.TimeoutError:
+        logger.error("status_timeout")
+        raise HTTPException(
+            status_code=504,
+            detail="Status check timed out. One or more services may be slow to respond."
+        )
     except Exception as e:
         logger.error("status_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -120,12 +131,26 @@ async def trigger_discovery(request: WorkflowTriggerRequest) -> WorkflowRunResul
     2. Scrapes and filters markets
     3. Analyzes with AI
     4. Places buy orders for top suggestions
+    
+    Note: This is a long-running operation. Timeout is set to 240 seconds.
     """
     service = get_service()
 
     try:
-        result = await service.run_discovery(request.mode)
+        # Set timeout to 240 seconds for workflow execution
+        timeout_seconds = 240.0
+        result = await asyncio.wait_for(
+            service.run_discovery(request.mode),
+            timeout=timeout_seconds
+        )
         return result
+    except asyncio.TimeoutError:
+        logger.error("discovery_timeout", mode=request.mode.value)
+        raise HTTPException(
+            status_code=504,
+            detail=f"Discovery workflow timed out after {timeout_seconds} seconds. "
+                   f"The operation may still be processing in the background."
+        )
     except Exception as e:
         logger.error("discovery_error", mode=request.mode.value, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -207,11 +232,32 @@ async def get_markets(
 ) -> list[dict[str, Any]]:
     """
     Get available markets.
+    
+    Note: This operation may take time as it fetches and filters markets from Polymarket.
+    Timeout is set to 240 seconds to allow for slow API responses.
     """
     service = get_service()
 
     try:
-        return await service.get_markets(limit=limit, filtered=filtered)
+        # Set timeout to 240 seconds (4 minutes) - Cloud Run default is 300s
+        # This gives us time to complete but ensures we return before Cloud Run times out
+        timeout_seconds = 240.0
+        return await asyncio.wait_for(
+            service.get_markets(limit=limit, filtered=filtered),
+            timeout=timeout_seconds
+        )
+    except asyncio.TimeoutError:
+        logger.error(
+            "get_markets_timeout",
+            limit=limit,
+            filtered=filtered,
+            timeout_seconds=timeout_seconds
+        )
+        raise HTTPException(
+            status_code=504,
+            detail=f"Request timed out after {timeout_seconds} seconds. "
+                   f"The market fetching operation took too long. Try reducing the limit parameter."
+        )
     except Exception as e:
         logger.error("get_markets_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -230,7 +276,17 @@ async def get_positions(mode: TradingMode) -> list[dict[str, Any]]:
     service = get_service()
 
     try:
-        return await service.get_positions(mode)
+        # Set timeout to 60 seconds for position fetching
+        return await asyncio.wait_for(
+            service.get_positions(mode),
+            timeout=60.0
+        )
+    except asyncio.TimeoutError:
+        logger.error("get_positions_timeout", mode=mode.value)
+        raise HTTPException(
+            status_code=504,
+            detail="Position fetching timed out. The operation may be slow due to price updates."
+        )
     except Exception as e:
         logger.error("get_positions_error", mode=mode.value, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
