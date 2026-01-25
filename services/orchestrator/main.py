@@ -131,7 +131,7 @@ async def trigger_discovery(request: WorkflowTriggerRequest) -> WorkflowRunResul
     2. Scrapes and filters markets
     3. Analyzes with AI
     4. Places buy orders for top suggestions
-    
+
     Note: This is a long-running operation. Timeout is set to 240 seconds.
     """
     service = get_service()
@@ -232,7 +232,7 @@ async def get_markets(
 ) -> list[dict[str, Any]]:
     """
     Get available markets.
-    
+
     Note: This operation may take time as it fetches and filters markets from Polymarket.
     Timeout is set to 240 seconds to allow for slow API responses.
     """

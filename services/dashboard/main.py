@@ -4,12 +4,16 @@ Dashboard Service - Web UI for MoneyMaker fake trading data.
 Serves a static dashboard that fetches data from the orchestrator API.
 """
 
+import logging
 import os
 
-from fastapi import FastAPI
+import httpx
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="MoneyMaker Dashboard",
@@ -47,7 +51,7 @@ async def health():
                 orchestrator_status = "unhealthy"
     except Exception as e:
         orchestrator_status = f"disconnected: {str(e)}"
-    
+
     return {
         "status": "healthy",
         "service": "dashboard",
@@ -107,23 +111,23 @@ async def proxy_to_orchestrator(path: str, request: Request):
     if path in excluded_paths or path.startswith("static/"):
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Not found")
-    
+
     # Build the full URL to the orchestrator
     url = f"{ORCHESTRATOR_URL}/{path}"
-    
+
     # Forward query parameters
     if request.url.query:
         url += f"?{request.url.query}"
-    
+
     # Determine timeout based on endpoint
     # Endpoints that might take longer (scraping, workflows) get extended timeout
     slow_endpoints = ["markets", "workflow"]
     is_slow_endpoint = any(slow in path.lower() for slow in slow_endpoints)
-    
+
     # Use longer timeout for slow endpoints (60s) vs normal endpoints (30s)
     # Cloud Run default timeout is 300s, so we have room
     timeout_seconds = 60.0 if is_slow_endpoint else 30.0
-    
+
     # Use httpx.Timeout with separate connect, read, write timeouts
     timeout = httpx.Timeout(
         connect=10.0,  # Connection timeout
@@ -131,18 +135,18 @@ async def proxy_to_orchestrator(path: str, request: Request):
         write=10.0,  # Write timeout
         pool=5.0  # Pool timeout
     )
-    
+
     # Forward the request
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             # Get request body if present
             body = await request.body() if request.method in ["POST", "PUT", "PATCH"] else None
-            
+
             # Forward headers (excluding host and connection)
             headers = dict(request.headers)
             headers.pop("host", None)
             headers.pop("connection", None)
-            
+
             # Make the request
             response = await client.request(
                 method=request.method,
@@ -150,7 +154,7 @@ async def proxy_to_orchestrator(path: str, request: Request):
                 headers=headers,
                 content=body,
             )
-            
+
             # Handle 503 Service Unavailable with better error message
             if response.status_code == 503:
                 logger.warning(
@@ -170,7 +174,7 @@ async def proxy_to_orchestrator(path: str, request: Request):
                                      "(e.g., lower limit for markets). If the issue persists, check the orchestrator service status in GCP."
                     }
                 )
-            
+
             # Return the response
             return Response(
                 content=response.content,
@@ -178,7 +182,7 @@ async def proxy_to_orchestrator(path: str, request: Request):
                 headers=dict(response.headers),
                 media_type=response.headers.get("content-type")
             )
-        except httpx.TimeoutException as e:
+        except httpx.TimeoutException:
             logger.warning(
                 f"Request to orchestrator timed out for {path} "
                 f"(timeout={timeout_seconds}s, method={request.method}, orchestrator_url={ORCHESTRATOR_URL})"
@@ -203,12 +207,12 @@ async def proxy_to_orchestrator(path: str, request: Request):
                 error_msg += ". Request timed out."
             else:
                 error_msg += f": {str(e)}"
-            
+
             logger.error(
                 f"Request error to orchestrator for {path}: {error_msg}",
                 exc_info=True
             )
-            
+
             return JSONResponse(
                 status_code=502,
                 content={
