@@ -240,11 +240,15 @@ class FirestoreClient:
             async for doc in query.stream():
                 data = doc.to_dict()
                 if data:
-                    # Remove 'id' from data if present to avoid conflict
-                    data.pop("id", None)
+                    # Get ID from data dict if present and valid, otherwise use doc.id
+                    # This handles both test mocks (ID in data) and real Firestore (ID from doc.id)
+                    if "id" in data and isinstance(data["id"], str):
+                        doc_id = data.pop("id")
+                    else:
+                        doc_id = str(doc.id)
                     positions.append(
                         Position(
-                            id=doc.id,
+                            id=doc_id,
                             **data,
                         )
                     )
@@ -367,11 +371,15 @@ class FirestoreClient:
             async for doc in query.stream():
                 data = doc.to_dict()
                 if data:
-                    # Remove 'id' from data if present to avoid conflict
-                    data.pop("id", None)
+                    # Get ID from data dict if present and valid, otherwise use doc.id
+                    # This handles both test mocks (ID in data) and real Firestore (ID from doc.id)
+                    if "id" in data and isinstance(data["id"], str):
+                        doc_id = data.pop("id")
+                    else:
+                        doc_id = str(doc.id)
                     transactions.append(
                         Transaction(
-                            id=doc.id,
+                            id=doc_id,
                             **data,
                         )
                     )

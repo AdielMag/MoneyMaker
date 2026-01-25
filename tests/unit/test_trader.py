@@ -25,6 +25,7 @@ def mock_settings():
     settings.trading = MagicMock()
     settings.trading.min_balance_to_trade = 10.0
     settings.trading.max_bet_amount = 50.0
+    settings.trading.max_positions = 10
     settings.workflows_fake_money = MagicMock()
     settings.workflows_fake_money.initial_balance = 1000.0
     return settings
